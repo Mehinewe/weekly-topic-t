@@ -34,7 +34,7 @@
 
   "pause": {
     "max_weeks": 2,
-    "requires_approval": true,
+    "requires_approval": false,
     "max_per_window": 1,
     "window_days": 90
   },

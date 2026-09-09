@@ -56,10 +56,15 @@ started the bot.
 
 ## Pause / absence
 
-`/pause [weeks] [reason]` — up to `pause.max_weeks` (default 2), **admin-approved**
-by default. While paused: no counting, no reminders, no strikes. The pause ends
-automatically. Abuse guard: `pause.max_per_window` approvals per
-`pause.window_days`.
+`/pause [weeks] [reason]` — up to `pause.max_weeks` (default 2). While paused: no
+counting, no reminders, no strikes. The pause ends automatically. Abuse guard:
+`pause.max_per_window` per `pause.window_days`.
+
+`pause.requires_approval` — code default `true` (request goes to the admin chat
+for `/approve` / `/reject`). **This deployment runs it `false`**: `/pause`
+self-approves instantly, still bounded by the two guards above (max 2 weeks, once
+per 90 days; over-length requests are capped, a second request in the window is
+refused). Admins see every pause in `pause_requests.csv` / `/list paused`.
 
 ## New members
 
