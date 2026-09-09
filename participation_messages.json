@@ -1,0 +1,29 @@
+{
+  "_comment": "Editable copy for every message the participation system sends. Placeholders in {curly braces} are filled in at send time; an unknown placeholder becomes empty. Edit here (or with the /setmsg admin command) and commit.",
+
+  "reminder_first": "🎯 Weekly English practice check-in\n\nYour goal this week is {required_days} active days — a voice message, a video, a reply to the weekly topic, or a real reply to another member.\n\nYou're at {active_days}/{required_days} so far. Plenty of time left. Jump in today! 💪",
+
+  "reminder_second": "⏰ Two days left this week\n\nYou're at {active_days}/{required_days} active days. One or two more days of practice and your weekly goal is complete — a quick voice note, a short video, or a thoughtful reply. You've got this! 🌟",
+
+  "warning_strike1": "⚠️ Participation warning\n\nYou practiced on fewer than {required_days} days this week ({active_days}/{required_days}). This is your first participation warning.\n\nYour strike stays active until you complete {clear_weeks} consecutive successful weeks (a successful week = {required_days} active days). If you fall short again before then, you'll be removed from the group.\n\nWe'd really like to keep hearing from you — see you in the chat! 🙌",
+
+  "strike_cleared": "✅ Strike cleared\n\nYou've completed {clear_weeks} consecutive successful weeks. Your participation warning is now removed. Excellent consistency — keep it going! 🎉",
+
+  "removal_notice": "Hi 👋\n\nYou didn't meet the minimum participation requirement again while your first warning was still active. Because this group is built around consistent English practice, your membership has been paused.\n\nYou're very welcome to rejoin in the future when you're ready to participate regularly. All the best with your English! 🌱",
+
+  "welcome": "Welcome, {name}! 👋\n\nThis group is for consistent English practice. One simple rule:\n\n🎯 Be active on at least {required_days} different days each week (Monday–Sunday). What counts: a voice message, a video message, a reply to the weekly topic, or a genuine reply to another member.\n\nSeveral messages on the same day still count as one day — it's about showing up regularly, not message count.\n\nMiss a week and you get a warning; a second miss before you've recovered means leaving the group. Full details: send /rules\n\nGoing to be away? Send /pause to request a break (up to {pause_max_weeks} weeks).\n\nYour first week is a free grace week. 💛\n\nTip: open a private chat with me and tap START so I can send you friendly reminders.",
+
+  "pause_requested": "✅ Pause request received ({weeks} week(s)). It's been sent to the admins for approval — I'll message you once it's decided.",
+
+  "pause_approved": "✅ Your pause is active until {ends}. No participation checks, reminders, or strikes until then. Enjoy the break! 🌴",
+
+  "pause_rejected": "Your pause request wasn't approved. {reason}\n\nIf you think this is a mistake, please reach out to an admin directly.",
+
+  "pause_ended": "👋 Welcome back — your pause has ended. The weekly goal of {required_days} active days is running again from this week.",
+
+  "pause_limit": "I can't file this request: you've already used {max_per_window} pause(s) in the last {window_days} days. Please reach out to an admin directly.",
+
+  "my_status": "📊 Your status\n\nThis week: {active_days}/{required_days} active days\nStrikes: {strikes}\nSuccessful weeks since strike: {streak}/{clear_weeks}\nState: {status}",
+
+  "rules": "🎯 Weekly English practice rule\n\nBe active on at least {required_days} different days each week (Monday–Sunday). What counts as an active day:\n• a voice message\n• a video message\n• a reply to the weekly topic post\n• a genuine reply to another member ({reply_min_words}+ words)\n\nSeveral messages on the same day = one active day. It rewards consistency, not volume. Plain text that isn't a reply, stickers, GIFs, emoji and reactions don't count.\n\nIf you miss a week: Strike 1 + a warning. Clear it by completing {clear_weeks} consecutive successful weeks. Miss again before clearing it → removed from the group (you can rejoin later).\n\nAway for a while? Send /pause (up to {pause_max_weeks} weeks, admin-approved)."
+}

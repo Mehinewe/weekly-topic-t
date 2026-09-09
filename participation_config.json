@@ -1,0 +1,55 @@
+{
+  "required_days": 3,
+  "clear_weeks": 4,
+  "week_timezone": "UTC",
+  "auto_removal": false,
+
+  "classifier": {
+    "count_voice": true,
+    "count_video": true,
+    "count_topic_reply": true,
+    "count_member_reply": true,
+    "count_forwarded": false,
+    "reply_min_words": 4,
+    "greeting_stoplist": [
+      "hi", "hie", "hey", "hello", "yo", "hallo", "heyy",
+      "good morning", "good afternoon", "good evening", "good night",
+      "gm", "gn", "morning", "evening",
+      "thanks", "thank you", "thx", "ty", "tysm",
+      "ok", "okay", "kk", "k", "yes", "no", "yep", "nope", "sure",
+      "lol", "lmao", "haha", "hahaha", "hehe",
+      "nice", "great", "cool", "wow", "amazing", "awesome", "perfect",
+      "same", "me too", "agreed", "true", "exactly",
+      "present", "here", "checking in", "check", "checked",
+      "test", "testing", "test message",
+      "done", "noted", "welcome", "congrats", "congratulations",
+      "good luck", "well done", "bravo"
+    ]
+  },
+
+  "reminders": {
+    "first":  { "weekday": "wed", "at_most_active_days": 1 },
+    "second": { "weekday": "fri", "at_most_active_days": 2 }
+  },
+
+  "pause": {
+    "max_weeks": 2,
+    "requires_approval": true,
+    "max_per_window": 1,
+    "window_days": 90
+  },
+
+  "grace_extra_weeks": 0,
+  "welcome_new_members": true,
+  "dm_fallback_to_group": false,
+  "max_removals_per_run": 5,
+  "tracking_starts": "2026-09-14",
+
+  "admin_user_ids": [],
+  "admin_chat_id": null,
+
+  "enabled": {
+    "reminders": true,
+    "evaluation": true
+  }
+}

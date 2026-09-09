@@ -1,0 +1,79 @@
+name: Weekly awards
+
+on:
+  # GitHub cron is best-effort and often runs late (or, rarely, not at all).
+  # So we fire a primary time plus two later catch-ups. sent_log.csv makes the
+  # extra attempts safe: the first one that succeeds posts, the rest no-op.
+  schedule:
+    - cron: "17 10 * * 1"  # 10:17 UTC Monday (primary)
+    - cron: "32 12 * * 1"  # 12:32 UTC catch-up if the primary was dropped/delayed
+    - cron: "32 14 * * 1"  # 14:32 UTC last-chance catch-up
+
+  # Manual trigger from the Actions tab. Defaults to a safe preview.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (show winners, do NOT post to the group)"
+        type: boolean
+        default: true
+      this_week:
+        description: "Test on THIS week's activity (instead of last week)"
+        type: boolean
+        default: false
+
+# Never let two attempts for the same week overlap: they both read/commit
+# sent_log.csv. A later run waits for the in-flight one rather than racing it.
+concurrency:
+  group: weekly-awards
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # to commit sent_log.csv back to the repo
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Post last week's awards
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+          BADGE_APP_URL: ${{ vars.BADGE_APP_URL }}
+          # Personalised avatars are uploaded by FTP to a subdomain instead of
+          # committed to the (public) repo. Unset -> avatar step is skipped and
+          # the button uses the manual upload page.
+          AVATAR_FTP_HOST: ${{ secrets.AVATAR_FTP_HOST }}
+          AVATAR_FTP_USER: ${{ secrets.AVATAR_FTP_USER }}
+          AVATAR_FTP_PASSWORD: ${{ secrets.AVATAR_FTP_PASSWORD }}
+          AVATAR_FTP_DIR: ${{ vars.AVATAR_FTP_DIR }}
+          AVATAR_FTP_PORT: ${{ vars.AVATAR_FTP_PORT }}
+          AVATAR_FTP_TLS: ${{ vars.AVATAR_FTP_TLS }}
+          AVATAR_PUBLIC_BASE: ${{ vars.AVATAR_PUBLIC_BASE }}
+        # Scheduled runs post for real for last week. Manual runs preview
+        # unless you untick "Dry run", and can target the current week for
+        # testing via "this_week".
+        run: python send_weekly_awards.py ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }} ${{ (github.event_name == 'workflow_dispatch' && inputs.this_week) && '--this-week' || '' }}
+
+      - name: Commit the sent-log
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sent_log.csv
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Record weekly awards sent ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            git pull --rebase --autostash origin main && git push
+          fi

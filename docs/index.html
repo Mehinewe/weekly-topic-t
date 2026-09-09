@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Get Your Badge Avatar</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root { --bg:#0e1621; --card:#17212b; --fg:#f5f5f5; --muted:#8a9aa9; --accent:#5eb5f7; }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; min-height:100vh; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    display:flex; flex-direction:column; align-items:center; padding:20px;
+  }
+  h1 { font-size:1.25rem; margin:.2rem 0 0; text-align:center; }
+  .sub { color:var(--muted); font-size:.9rem; margin:.3rem 0 1.2rem; text-align:center; }
+  .card {
+    background:var(--card); border-radius:18px; padding:22px; width:100%;
+    max-width:380px; box-shadow:0 8px 30px rgba(0,0,0,.35); text-align:center;
+  }
+  canvas { width:260px; height:260px; max-width:100%; border-radius:50%; background:#0a0f15; }
+  .row { display:flex; flex-direction:column; gap:10px; margin-top:18px; }
+  button, label.btn {
+    appearance:none; border:0; border-radius:12px; padding:13px 16px;
+    font-size:1rem; font-weight:600; cursor:pointer; color:#fff;
+    background:var(--accent); display:block; text-align:center;
+  }
+  button:disabled { opacity:.4; cursor:default; }
+  label.btn.secondary { background:#2b3a47; }
+  input[type=file] { display:none; }
+  .hint { color:var(--muted); font-size:.8rem; margin-top:14px; line-height:1.4; }
+  .badge-name { font-weight:700; }
+</style>
+</head>
+<body>
+  <h1>🌟 Badge Avatar</h1>
+  <div class="sub" id="subtitle">Wear your award with pride</div>
+
+  <div class="card">
+    <canvas id="canvas" width="600" height="600"></canvas>
+    <div class="row">
+      <label class="btn secondary" for="file">📷 Choose your photo</label>
+      <input id="file" type="file" accept="image/*">
+      <button id="download" disabled>⬇️ Download badged avatar</button>
+    </div>
+    <div class="hint">
+      Pick a photo, then download. On your phone: open Telegram → your profile →
+      <b>Edit → set profile photo</b> and choose the saved image.
+    </div>
+  </div>
+
+<script>
+/* ------------------------------------------------------------------ *
+ * Badge definitions. Each award type draws a coloured ring + emoji.
+ * To use real artwork instead, drop a transparent PNG at
+ *   frames/<type>.png   (same square size, centre cut out)
+ * and it will be drawn over the photo automatically.
+ * ------------------------------------------------------------------ */
+const BADGES = {
+  shark:     { label: "Video Shark",      ring: "#1e88e5", emoji: "🦈" },
+  microphone:{ label: "Voice Legend",     ring: "#e53935", emoji: "🎙️" },
+  butterfly: { label: "Social Butterfly", ring: "#fb8c00", emoji: "🦋" },
+};
+const DEFAULT_BADGE = "butterfly";
+
+const params = new URLSearchParams(location.search);
+const type = (params.get("type") || DEFAULT_BADGE).toLowerCase();
+const badge = BADGES[type] || BADGES[DEFAULT_BADGE];
+
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+
+document.getElementById("subtitle").innerHTML =
+  'Your badge: <span class="badge-name">' + badge.emoji + " " + badge.label + "</span>";
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const SIZE = canvas.width;            // 600
+const RING = Math.round(SIZE * 0.06); // ring thickness
+let userImg = null;
+
+// Try to load optional real PNG artwork for this badge.
+let frameImg = null;
+const tryFrame = new Image();
+tryFrame.crossOrigin = "anonymous";
+tryFrame.onload = () => { frameImg = tryFrame; draw(); };
+tryFrame.onerror = () => { frameImg = null; };
+tryFrame.src = "frames/" + type + ".png";
+
+function draw() {
+  ctx.clearRect(0, 0, SIZE, SIZE);
+
+  // 1. Photo, clipped to a circle.
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - RING, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+  if (userImg) {
+    // cover-fit the photo into the circle
+    const s = Math.max(SIZE / userImg.width, SIZE / userImg.height);
+    const w = userImg.width * s, h = userImg.height * s;
+    ctx.drawImage(userImg, (SIZE - w) / 2, (SIZE - h) / 2, w, h);
+  } else {
+    ctx.fillStyle = "#223040";
+    ctx.fillRect(0, 0, SIZE, SIZE);
+    ctx.fillStyle = "#5a6b7a";
+    ctx.font = "28px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("your photo", SIZE / 2, SIZE / 2 + 10);
+  }
+  ctx.restore();
+
+  // 2. Badge overlay — real artwork if available, else a drawn ring + emoji.
+  if (frameImg) {
+    ctx.drawImage(frameImg, 0, 0, SIZE, SIZE);
+  } else {
+    ctx.lineWidth = RING;
+    ctx.strokeStyle = badge.ring;
+    ctx.beginPath();
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - RING / 2, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // emoji medallion at the bottom
+    const cx = SIZE / 2, cy = SIZE - RING * 1.6, r = RING * 1.7;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = badge.ring;
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.font = Math.round(r * 1.2) + "px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(badge.emoji, cx, cy + 2);
+    ctx.textBaseline = "alphabetic";
+  }
+}
+
+document.getElementById("file").addEventListener("change", (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    userImg = img;
+    document.getElementById("download").disabled = false;
+    draw();
+  };
+  img.src = URL.createObjectURL(file);
+});
+
+document.getElementById("download").addEventListener("click", () => {
+  const link = document.createElement("a");
+  link.download = "badge-avatar-" + type + ".png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+});
+
+draw(); // initial placeholder
+</script>
+</body>
+</html>

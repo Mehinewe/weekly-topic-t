@@ -1,0 +1,58 @@
+name: Log group activity
+
+on:
+  # Owns Telegram's getUpdates cursor, so it also handles /pause + admin
+  # commands and roster/join tracking. Runs every ~10 min (GitHub throttles
+  # sub-hourly schedules, so expect 10-25 min in practice) — Telegram keeps
+  # undelivered updates ~24h, so nothing is lost between runs.
+  schedule:
+    - cron: "*/10 * * * *"
+
+  workflow_dispatch:
+
+# Never let two runs — or a run and the reminder/evaluation jobs — commit the
+# shared state files at the same time. They queue instead of racing.
+concurrency:
+  group: telegram-state
+  cancel-in-progress: false
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Poll Telegram — activity, roster, commands
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Only needed if the admin group (for /pause approvals + commands) is a
+          # different chat from the main group. Moved out of participation_config.json
+          # so this public repo doesn't expose the private admin chat id.
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+        run: python log_activity.py
+
+      - name: Commit updated state
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add activity_log.csv activity_state.json members.csv \
+                  participation_config.json participation_messages.json \
+                  pause_requests.csv removals.csv topic_posts.csv 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Log group activity ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            git pull --rebase --autostash origin main && git push
+          fi

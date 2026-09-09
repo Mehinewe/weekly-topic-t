@@ -1,0 +1,27 @@
+# Secrets — never commit the real token / chat id
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Temp per-winner media built at post time (cleaned up automatically). The
+# badge avatar contains the winner's face — it is uploaded to external storage
+# and never committed here. docs/avatars/ is ignored so a stray build can't
+# re-add real photos to this public repo.
+badges/_flip_*.gif
+badges/_avatar_*.png
+docs/avatars/
+
+# NOTE: activity_log.csv and activity_state.json ARE committed on purpose —
+# the GitHub Actions logger pushes them back so the log persists between runs.
+# The log stores ONLY anonymous numeric Telegram ids (no names), so it's safe
+# in a public repo; winners' names are looked up live at post time.
+#
+# The participation system's state is committed for the same reason and is also
+# numeric-id-only — do NOT gitignore these:
+#   members.csv  pause_requests.csv  removals.csv  reminder_log.csv
+#   weekly_results.csv  participation_eval_log.csv  topic_posts.csv
+#   participation_config.json  participation_messages.json  (admin-editable)

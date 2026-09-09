@@ -1,0 +1,65 @@
+name: Weekly Telegram topic
+
+on:
+  # GitHub cron is best-effort and often runs late (or, rarely, not at all).
+  # So we fire a primary time plus two later catch-ups. sent_log.csv makes the
+  # extra attempts safe: the first one that succeeds posts, the rest no-op.
+  schedule:
+    - cron: "32 10 * * 1"  # 10:32 UTC Monday (primary)
+    - cron: "47 12 * * 1"  # 12:47 UTC catch-up if the primary was dropped/delayed
+    - cron: "47 14 * * 1"  # 14:47 UTC last-chance catch-up
+
+  # Lets you trigger a run by hand from the Actions tab.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (preview only, do NOT post to the group)"
+        type: boolean
+        default: true
+
+# Never let two attempts for the same week overlap: they both read/commit
+# sent_log.csv. A later run waits for the in-flight one rather than racing it.
+concurrency:
+  group: weekly-topic
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to commit sent_log.csv back to the repo
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Post this week's topic
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        # On the weekly schedule this always posts. On a manual run it posts
+        # only if you untick "Dry run" (default is preview-only / safe).
+        run: python send_weekly_topic.py ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
+
+      # Persist the "posted this week" marker so the catch-up crons (and any
+      # delayed/duplicate run) skip instead of posting again. Skipped on a
+      # dry-run preview, which never writes the marker anyway.
+      - name: Commit the sent-log
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sent_log.csv
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Record weekly topic sent ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            git pull --rebase --autostash origin main && git push
+          fi

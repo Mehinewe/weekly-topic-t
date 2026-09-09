@@ -1,0 +1,68 @@
+name: Participation weekly evaluation
+
+on:
+  # Monday, after the week (Mon-Sun UTC) has closed and the poller has had
+  # time to flush the last Sunday updates. Primary + two catch-ups; the
+  # finished week is recorded in participation_eval_log.csv so a repeat run
+  # no-ops. Runs before the awards job so the admin report lands first.
+  schedule:
+    - cron: "0 6 * * 1"    # 06:00 UTC Monday (primary)
+    - cron: "0 9 * * 1"    # 09:00 UTC catch-up
+    - cron: "0 12 * * 1"   # 12:00 UTC last-chance catch-up
+
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (full preview: send nothing, change nothing)"
+        type: boolean
+        default: true
+      this_week:
+        description: "Evaluate the CURRENT week instead of last week (testing)"
+        type: boolean
+        default: false
+      force:
+        description: "Re-run even if this week is already in the eval log"
+        type: boolean
+        default: false
+
+concurrency:
+  group: telegram-state
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: Evaluate last week's participation
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Where the weekly admin report goes, if that's a separate chat from
+          # the main group. Kept in a secret, not participation_config.json.
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+        run: >-
+          python evaluate_participation.py
+          ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
+          ${{ (github.event_name == 'workflow_dispatch' && inputs.this_week) && '--this-week' || '' }}
+          ${{ (github.event_name == 'workflow_dispatch' && inputs.force) && '--force' || '' }}
+
+      - name: Commit evaluation state
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add members.csv participation_eval_log.csv weekly_results.csv removals.csv 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Participation evaluation ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+            git pull --rebase --autostash origin main && git push
+          fi
