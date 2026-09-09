@@ -155,8 +155,10 @@ commands. Key architecture points:
   live in that poller (now `*/10 * * * *`, up from hourly). Everything else only
   *sends*. `classify_practice()` in `participation.py` decides the `practice` 0/1
   column at log time — **message text is never stored**, so classifier tweaks are
-  forward-only. Only voice / video / video-note / reply-to-topic / reply-to-member
-  count (config: `participation_config.json`).
+  forward-only. Speaking-only rule: only voice / video / video-note count. Text
+  never counts, not even as a reply; `count_topic_reply` / `count_member_reply`
+  in `participation_config.json` (both **off**) would re-enable ≥ `reply_min_words`
+  word replies to the topic / to a member.
 - **All state is numeric-id-only** (like `activity_log.csv`) and committed back:
   `members.csv` (roster + strike/pause/grace state), `weekly_results.csv`,
   `pause_requests.csv`, `removals.csv`, `reminder_log.csv`,

@@ -18,12 +18,12 @@ A day counts as **active** if the member, that calendar day, sends one of:
 |---|---|
 | voice message | any |
 | video message / video note | any |
-| reply to the **weekly topic** post | ≥ 4 words (config: `reply_min_words`) |
-| reply to **another member** | ≥ 4 words |
 
-Does **not** count: standalone text (not a reply), stickers, GIFs, emoji-only,
-reactions, `/commands`, forwarded media, and short greetings/filler
-(`hi`, `thanks`, `test`, … — the `greeting_stoplist`).
+Text **never** counts — not standalone, **not even as a reply**. The
+`count_topic_reply` / `count_member_reply` flags (both **off**) can re-enable
+text replies to the weekly topic / to another member at ≥ `reply_min_words`
+words; leave them off for a speaking-only rule. Also never counts: stickers,
+GIFs, emoji-only, reactions, `/commands`, forwarded media.
 
 Several messages on one day still count as **one** day. The classifier runs once,
 when the message is logged, and writes a `practice` 0/1 column to

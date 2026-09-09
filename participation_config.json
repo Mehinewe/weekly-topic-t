@@ -7,8 +7,8 @@
   "classifier": {
     "count_voice": true,
     "count_video": true,
-    "count_topic_reply": true,
-    "count_member_reply": true,
+    "count_topic_reply": false,
+    "count_member_reply": false,
     "count_forwarded": false,
     "reply_min_words": 4,
     "greeting_stoplist": [

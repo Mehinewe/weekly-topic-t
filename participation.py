@@ -112,8 +112,8 @@ DEFAULT_CONFIG = {
     "classifier": {
         "count_voice": True,
         "count_video": True,
-        "count_topic_reply": True,
-        "count_member_reply": True,
+        "count_topic_reply": False,
+        "count_member_reply": False,
         "count_forwarded": False,
         "reply_min_words": 4,
         "greeting_stoplist": [],
@@ -364,9 +364,10 @@ def _is_forwarded(message):
 def classify_practice(message, cfg, topic_message_ids):
     """Does this Telegram `message` count as an active English-practice message?
 
-    Strict v1 rule (config-tunable): only voice, video/video_note, a reply to the
-    weekly topic, or a genuine reply to another member counts. Standalone text
-    never counts, regardless of length.
+    Speaking-only rule (config-tunable): only voice and video/video_note count.
+    Text never counts, regardless of length — not even as a reply. Enabling
+    `count_topic_reply` / `count_member_reply` would let ≥ `reply_min_words`-word
+    replies (to the weekly topic / to another member) count too; both ship off.
 
     Returns (practice: bool, reason: str) — the reason is for --dry-run / debug.
     """
@@ -707,11 +708,11 @@ if __name__ == "__main__":
         ({"text": "hi"}, False),
         ({"text": "Thanks everyone, see you tomorrow!"}, False),   # standalone text
         ({"text": "I agree", "reply_to_message": {"message_id": 5,
-          "from": {"id": 2}}}, False),                             # too short
+          "from": {"id": 2}}}, False),                             # short reply
         ({"text": "I think the best answer is planning ahead and practising daily",
-          "reply_to_message": {"message_id": 5, "from": {"id": 2}}}, True),
+          "reply_to_message": {"message_id": 5, "from": {"id": 2}}}, False),  # member reply — off
         ({"text": "Great question — here is my full answer to the weekly topic today",
-          "reply_to_message": {"message_id": 111, "from": {"id": 999, "is_bot": True}}}, True),
+          "reply_to_message": {"message_id": 111, "from": {"id": 999}}}, False),  # topic reply — off
         ({"text": "/pause 2"}, False),
         ({"sticker": {}}, False),
         ({"voice": {}, "forward_date": 123}, False),
