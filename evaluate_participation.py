@@ -141,7 +141,7 @@ def main():
             tally["streak"] += 1
         elif action == "remove":
             if not dry_run:
-                _dm(token, cfg, messages, uid, "removal_notice")
+                _dm(token, cfg, messages, uid, "removal_notice", required_days=req)
                 ok, detail = P.kick_member(token, chat_id, uid)
                 if ok:
                     m["status"] = "removed"

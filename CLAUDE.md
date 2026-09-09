@@ -166,9 +166,11 @@ commands. Key architecture points:
   `getChatMember` only when a message is sent. `members.csv` auto-seeds from
   `activity_log.csv` on first run.
 - **Strike machine** (`apply_week_result`): miss a week → Strike 1 + warning; miss
-  again while Strike 1 is active → Strike 2 → kick (ban+unban); 4 consecutive
+  again while Strike 1 is active → Strike 2 → kick (ban+unban); `clear_weeks`
   successful weeks clears Strike 1; any failed week resets the success counter.
-  `auto_removal` ships **off** (Strike 2 only flagged in the report).
+  **This deployment: `clear_weeks: 1`** (one good week clears — "fast two-strike").
+  `auto_removal` ships **off** (Strike 2 only flagged in the report) — turn on
+  after a 1–2 week warning-only launch.
 - **`evaluate_participation.py`** (Monday, `evaluate.yml`, 3 cron times, idempotent
   via `participation_eval_log.csv`) has safety gates: aborts if a week has no logged
   practice activity, if far fewer members than usual were active (unless `--force`),

@@ -1,6 +1,6 @@
 {
   "required_days": 3,
-  "clear_weeks": 4,
+  "clear_weeks": 1,
   "week_timezone": "UTC",
   "auto_removal": false,
 
@@ -41,7 +41,7 @@
 
   "grace_extra_weeks": 0,
   "welcome_new_members": true,
-  "dm_fallback_to_group": false,
+  "dm_fallback_to_group": true,
   "max_removals_per_run": 5,
   "tracking_starts": "2026-09-14",
 

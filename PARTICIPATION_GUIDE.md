@@ -35,10 +35,12 @@ when the message is logged, and writes a `practice` 0/1 column to
 |---|---|
 | Finish a week with < 3 active days, no strike yet | **Strike 1** + a private warning |
 | Finish a week with < 3 active days **while Strike 1 is active** | **Strike 2** → removal |
-| Complete **4 consecutive successful weeks** after Strike 1 | Strike cleared |
+| Finish **`clear_weeks` successful weeks** after Strike 1 | Strike cleared |
 | Any failed week | success-week counter resets to 0 |
 
-`clear_weeks` (default 4) and `required_days` (default 3) are configurable.
+`required_days` (default 3) and `clear_weeks` are configurable. **This deployment
+runs `clear_weeks: 1`** — a "fast two-strike": miss a week → warning; hit the
+goal the very next week → warning cleared; miss two weeks running → removed.
 Removal is a **kick** (ban + immediate unban) so the person can rejoin later.
 
 ## Reminders
@@ -46,9 +48,11 @@ Removal is a **kick** (ban + immediate unban) so the person can rejoin later.
 - **Wednesday** — DM members at 0–1 active days.
 - **Friday** — DM members still below 3, showing their progress.
 
-Members who have never opened a private chat with the bot can't be DM'd; set
-`dm_fallback_to_group: true` to @-mention them in the group instead, or leave it
-off and they're just skipped (the weekly warning still lands).
+Members who have never opened a private chat with the bot can't be DM'd.
+**This deployment runs `dm_fallback_to_group: true`**, so the Wed/Fri reminders
+*and* the Monday Strike-1 warning @-mention those members in the group instead
+(a warning nobody sees isn't a warning). Turn it off once most members have
+started the bot.
 
 ## Pause / absence
 
