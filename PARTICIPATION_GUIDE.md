@@ -56,15 +56,21 @@ started the bot.
 
 ## Pause / absence
 
-`/pause [weeks] [reason]` — up to `pause.max_weeks` (default 2). While paused: no
-counting, no reminders, no strikes. The pause ends automatically. Abuse guard:
-`pause.max_per_window` per `pause.window_days`.
+`/pause [weeks] [reason]` — each pause is up to `pause.max_weeks` weeks, capped
+if longer; bare `/pause` = `max_weeks`. While paused: no counting, no reminders,
+no strikes. Ends automatically. Guard: at most `pause.max_per_window` approved
+pauses per rolling `pause.window_days`; the next request is refused.
 
 `pause.requires_approval` — code default `true` (request goes to the admin chat
-for `/approve` / `/reject`). **This deployment runs it `false`**: `/pause`
-self-approves instantly, still bounded by the two guards above (max 2 weeks, once
-per 90 days; over-length requests are capped, a second request in the window is
-refused). Admins see every pause in `pause_requests.csv` / `/list paused`.
+for `/approve` / `/reject`; not active until approved). **This deployment runs it
+`false`**: `/pause` self-approves instantly.
+
+**This deployment:** `max_weeks: 1`, `max_per_window: 2`, `window_days: 90` — a
+member gets **two 1-week pauses per 90 days**, used at different times. Pauses
+don't stack (a new one replaces the current `pause_start`/`pause_end`), so the
+second is meant for *after* the first ends — there's no single 2-week block. For
+two consecutive weeks a member takes one now and the second as the first ends,
+or an admin extends it. Admins: `/list paused`, `/endpause <id>`.
 
 ## New members
 
