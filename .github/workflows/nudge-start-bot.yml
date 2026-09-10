@@ -1,0 +1,32 @@
+name: Nudge — start the bot (pre-launch)
+
+# TEMPORARY. One-off campaign before the participation rule goes live
+# (2026-09-14). Runs Thu–Sun; each run re-checks who still hasn't opened a DM
+# with the bot and @-mentions them in the group with the Announcement.jpg
+# banner. nudge_start_bot.py self-disables on/after the launch date and no-ops
+# once everyone has started. DELETE this file + nudge_start_bot.py after launch.
+
+on:
+  schedule:
+    - cron: "0 16 * * 4,5,6,0"   # 16:00 UTC Thu, Fri, Sat, Sun
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (print who'd be nudged, send nothing)"
+        type: boolean
+        default: true
+
+jobs:
+  nudge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Nudge members who haven't started the bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python nudge_start_bot.py ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
