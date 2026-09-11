@@ -27,6 +27,9 @@ BANNER = BASE / "Announcement.jpg"
 ACTIVITY = BASE / "activity_log.csv"
 API_TIMEOUT = 30
 IN_GROUP = ("member", "administrator", "creator", "restricted")
+# One-tap deep link: opens a chat with the bot with Start ready to press, so
+# members don't have to search for it by name.
+START_LINK = "https://t.me/Merv_english_bot?start=go"
 
 
 def load_dotenv():
@@ -99,11 +102,13 @@ def main():
     caption = (
         f"⏰ <b>{days_left} day(s) until the new rule starts "
         f"(Monday 14 September)</b>\n\n"
-        "If Mervi tags you below, you still need to <b>open a private chat with "
-        "Mervi and tap START</b> — otherwise your Wednesday &amp; Friday "
-        "reminders can't reach you (Mervi can't message you first).\n\n"
+        "If Mervi tags you below, you still need to start the bot — otherwise "
+        "your Wednesday &amp; Friday reminders can't reach you (Mervi can't "
+        "message you first).\n\n"
+        f'👉 <a href="{START_LINK}">Tap here to start Mervi</a> — one tap, '
+        "that's it.\n\n"
         "<b>Not tagged?</b> If you're in this group, send any message here so "
-        "Mervi can track you, then start the bot too.\n\n"
+        "Mervi can track you, then tap the link above too.\n\n"
         "Full rule is pinned: <b>3 active days per week</b>, voice or video \U0001f4aa"
     )
 
