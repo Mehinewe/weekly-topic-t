@@ -1,5 +1,10 @@
 # Weekly Telegram Topic Auto-Poster
 
+**Wednesday update:** Illustrated idiom challenges now replace the old picture
+descriptions. A picture and clue post at 10:32 UTC; the answer, examples, and
+speaking prompt follow at 18:32 UTC. See [IDIOM_GUIDE.md](IDIOM_GUIDE.md) for content,
+previews, and scheduling.
+
 Posts a weekly English **topic** — a PNG image + a message — to your Telegram group
 **automatically every Monday morning**. You prepare the content ahead of time; the bot
 picks each week's entry and posts it.

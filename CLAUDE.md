@@ -4,7 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Telegram group automation, run on GitHub Actions cron — no app server, no test suite.
+Telegram group automation, run on GitHub Actions cron — no app server.
+Offline Wednesday regression tests: `python -m unittest discover -s tests -v`.
+
+**Wednesday replacement:** `wednesday.yml` now runs `send_wednesday_idiom.py`:
+an illustrated idiom challenge at 10:32 UTC and a reply with the answer at
+18:32 UTC. Content: `idioms_wednesday.json` + `images_idioms/`. Persistent state:
+`idiom_sent_log.json` (intentionally committed). See [IDIOM_GUIDE.md](IDIOM_GUIDE.md).
+References below to the old Wednesday image schedule describe the retired flow;
+`schedule_wednesday.csv` and `images_wednesday/` are retained only as references.
 Two features share the same bot token / chat id (repo secrets `TELEGRAM_BOT_TOKEN`,
 `TELEGRAM_CHAT_ID`):
 
