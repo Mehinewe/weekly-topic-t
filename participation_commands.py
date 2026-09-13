@@ -279,13 +279,19 @@ def _cmd_mystatus(message, ctx, sender, args, raw=""):
     m = ctx.members.get(sender)
     cfg = ctx.cfg
     status = (m.get("status") if m else "active") or "active"
-    _reply(ctx, message, P.render(ctx.messages, "my_status",
-                                  active_days=_progress_line(ctx, sender).split("/")[0],
-                                  required_days=cfg["required_days"],
-                                  strikes=(m.get("strikes") if m else "0") or "0",
-                                  streak=(m.get("success_streak") if m else "0") or "0",
-                                  clear_weeks=cfg["clear_weeks"],
-                                  status=status))
+    text = P.render(ctx.messages, "my_status",
+                    active_days=_progress_line(ctx, sender).split("/")[0],
+                    required_days=cfg["required_days"],
+                    strikes=(m.get("strikes") if m else "0") or "0",
+                    streak=(m.get("success_streak") if m else "0") or "0",
+                    clear_weeks=cfg["clear_weeks"],
+                    status=status)
+    # Personal numbers (strikes, progress) only ever go to DM — never the
+    # group, even if /mystatus was typed there. If they can't be DMed yet,
+    # reply in-place with a generic "start the bot" nudge, no personal data.
+    ok, _ = P.send_dm(ctx.token, sender, text)
+    if not ok:
+        _reply(ctx, message, P.render(ctx.messages, "mystatus_need_start"))
 
 
 def _cmd_rules(message, ctx, sender, args, raw=""):

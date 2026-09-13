@@ -25,5 +25,7 @@
 
   "my_status": "📊 Your status\n\nThis week: {active_days}/{required_days} active days\nStrikes: {strikes}\nSuccessful weeks since strike: {streak}/{clear_weeks}\nState: {status}",
 
+  "mystatus_need_start": "🔒 I can't send you your status privately yet — open a private chat with me first: https://t.me/Merv_english_bot?start=go (or search \"Mervi\" and tap START), then send /mystatus again.",
+
   "rules": "🎯 Weekly English practice rule\n\nBe active on at least {required_days} different days each week (Monday–Sunday). What counts as an active day:\n• a voice message\n• a video message (or video note)\n\nSeveral messages on the same day = one active day. It rewards speaking practice, not volume. Text messages, stickers, GIFs, emoji and reactions don't count — not even as replies.\n\nIf you miss a week: you get a warning. Reach your goal the very next week and the warning clears. Miss two weeks in a row → removed from the group (you can rejoin later).\n\nAway for a while? Send /pause for a 1-week break — it starts right away. You get two per 90 days, used at different times (up to 2 weeks total)."
 }

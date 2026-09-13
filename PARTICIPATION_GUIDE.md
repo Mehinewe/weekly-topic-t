@@ -139,6 +139,10 @@ Commands respond within ~10 min (poller cadence).
 
 Member commands: `/pause [weeks] [reason]`, `/mystatus`, `/rules`, `/help`.
 
+`/mystatus` always answers **by DM**, even if typed in the group — it never
+posts strikes/progress publicly. If the sender hasn't started the bot, they get
+a generic "start the bot" nudge in the group instead (no personal numbers).
+
 Config lives in **`participation_config.json`**, message copy in
 **`participation_messages.json`** — both editable directly on GitHub and
 committed back when changed via commands.
