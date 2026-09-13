@@ -4,7 +4,7 @@
 
 This repository automates Telegram topics, awards, and participation management with Python scripts and GitHub Actions; there is no application server.
 
-- Root scripts include `send_weekly_topic.py`, `send_weekly_awards.py`, and `log_activity.py`. Shared participation logic lives in `participation.py`; bot commands live in `participation_commands.py`.
+- Root scripts include `send_weekly_topic.py`, `send_weekly_awards.py`, and `log_activity.py`. Shared participation logic lives in `participation.py`; bot commands live in `participation_commands.py`. Shared delivery, Telegram, settings, and atomic storage helpers live in `automation/shared/`. Pure award, participation, and reminder rules live in `automation/<feature>/rules.py`.
 - Root CSV/JSON files contain schedules, configuration, and persistent runtime state.
 - `images/` holds Monday artwork; `images_idioms/` holds Wednesday illustrations; `badges/` holds award assets. The old `images_wednesday/` is retired.
 - `docs/index.html` is the static badge-avatar app served through GitHub Pages.
@@ -33,7 +33,7 @@ Preserve UTF-8 text and emoji. Schedule CSVs use `date,image,message`; prefer `Y
 
 ## Testing Guidelines
 
-Run `python -m unittest discover -s tests -v` for offline Wednesday posting regression tests. No coverage threshold is configured. Run relevant previews too. For classifier edits, extend the samples in `participation.py` and inspect results: failures print `FAIL` without a failing exit code. Verify dry runs leave state unchanged. Check badge-app changes in a browser.
+Run `python -m unittest discover -s tests -v` for offline regression and failure-recovery tests, and `python validate_project.py` for content/configuration validation. No coverage threshold is configured. Run relevant previews too. For classifier edits, extend the samples in `participation.py` and inspect results: failures print `FAIL` without a failing exit code. Verify dry runs leave state unchanged. Check badge-app changes in a browser.
 
 ## Commit & Pull Request Guidelines
 
@@ -43,4 +43,4 @@ PRs should describe behavior changes, list validation commands and results, link
 
 ## Security & State Handling
 
-Keep credentials in gitignored `.env` or Actions secrets. Never commit member names, message text, or generated personal avatars. Preserve intentionally tracked logs and state. Keep `log_activity.py` as the single Telegram update poller, and preserve idempotency guards and workflow concurrency.
+Keep credentials in gitignored `.env` or Actions secrets. Never commit member names, message text, or generated personal avatars. Preserve intentionally tracked logs and state. Keep `log_activity.py` as the single Telegram update poller, and preserve idempotency guards and workflow concurrency. Keep `topic_delivery.json` and `award_delivery.json` tracked; never clear pending delivery steps without reconciling the actual chat. See `RELIABILITY_GUIDE.md`.

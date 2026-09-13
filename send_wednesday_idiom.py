@@ -215,5 +215,5 @@ if __name__ == "__main__":
     except requests.RequestException:
         # Request exceptions may contain the bot token in the URL.
         topic._fail("Telegram request failed; inspect the chat before retrying.")
-    except (OSError, ValueError) as exc:
+    except (OSError, ValueError, topic.TelegramRejected) as exc:
         topic._fail(str(exc))

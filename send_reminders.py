@@ -25,6 +25,7 @@ import sys
 import time
 
 import participation as P
+from automation.reminders.rules import select_targets
 
 WHICH_TO_KEY = {"wed": "first", "fri": "second"}
 DM_PAUSE_SECONDS = 1.1   # stay well under Telegram's ~30 msg/s ceiling
@@ -69,16 +70,8 @@ def main():
     already = {(r["week_monday"], r["user_id"], r["which"])
                for r in P.read_rows(P.REMINDER_LOG_FILE)}
 
-    targets = []
-    for uid, m in members.items():
-        if not P.member_is_trackable(m, week_monday):
-            continue
-        got = counts.get(uid, 0)
-        if got > threshold or got >= req:
-            continue
-        if not force and (week_iso, str(uid), which) in already:
-            continue
-        targets.append((uid, got))
+    targets = select_targets(members, counts, already, week_monday, which, req,
+                             threshold, force, P.member_is_trackable)
 
     print(f"{which.upper()} reminder — week of {week_iso}: "
           f"{len(targets)} member(s) at or below {threshold}/{req}"
@@ -89,7 +82,7 @@ def main():
 
     if dry_run:
         for uid, got in sorted(targets, key=lambda t: t[1]):
-            name = P.resolve_name(token, chat_id, uid) if token else f"User {uid}"
+            name = f"User {uid}"
             print(f"  would DM {name} ({uid}) — {got}/{req}")
         return
 

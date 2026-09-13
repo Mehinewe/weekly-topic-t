@@ -1,6 +1,7 @@
 """Shared posting helpers. Sending requests are never retried automatically."""
 import sys
 import requests
+from automation.shared.delivery import TelegramRejected
 
 API_TIMEOUT = 30
 
@@ -49,7 +50,8 @@ def send_message(token, chat_id, text):
         data={"chat_id": chat_id, "text": text},
         timeout=API_TIMEOUT,
     )
-    _check(resp, "sendMessage")
+    body = _check(resp, "sendMessage")
+    return (body.get("result") or {}).get("message_id")
 
 
 def _check(resp, what):
@@ -57,9 +59,11 @@ def _check(resp, what):
     try:
         body = resp.json()
     except ValueError:
-        _fail(f"{what}: non-JSON response (HTTP {resp.status_code}): {resp.text[:300]}")
-    if not body.get("ok"):
-        _fail(f"{what} failed: {body.get('description', resp.text[:300])}")
+        raise ValueError(f"{what}: non-JSON response; inspect the chat before retrying.") from None
+    if not isinstance(body, dict) or type(body.get("ok")) is not bool:
+        raise ValueError(f"{what}: invalid response; inspect the chat before retrying.")
+    if body["ok"] is False:
+        raise TelegramRejected(f"{what} rejected (code {body.get('error_code', 'unknown')})")
     print(f"{what} OK")
     return body
 

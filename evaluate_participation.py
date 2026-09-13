@@ -123,7 +123,7 @@ def main():
         tally["completed" if passed else "below"] += 1
 
         action = P.apply_week_result(m, passed, week_iso, cfg)
-        name = P.resolve_name(token, chat_id, uid) if token else f"User {uid}"
+        name = P.resolve_name(token, chat_id, uid) if token and not dry_run else f"User {uid}"
 
         if action == "strike1":
             tally["strike1"] += 1

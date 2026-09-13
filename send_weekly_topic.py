@@ -21,12 +21,15 @@ Required environment variables:
 """
 
 import csv
+import hashlib
 import os
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from automation.shared.settings import load_dotenv
+from automation.shared.delivery import Delivery, TelegramRejected
+from requests import RequestException
 from automation.shared.telegram import (API_TIMEOUT, send_photo, send_message,
                                         pin_message, _check)
 
@@ -50,6 +53,7 @@ IMAGES_DIR = BASE_DIR / "images"
 # back to the repo by the workflow so state survives across stateless runs, so
 # it is intentionally NOT gitignored.
 SENT_LOG_FILE = BASE_DIR / "sent_log.csv"
+DELIVERY_FILE = BASE_DIR / "topic_delivery.json"
 
 # Telegram limits a photo caption to 1024 characters. Longer messages are
 # split: the photo goes out with the first chunk, the rest as a text message.
@@ -282,12 +286,14 @@ def main():
 
     print(f"Posting topic for {row['date']}: image={image_path.name}")
 
-    if len(message) <= CAPTION_LIMIT:
-        message_id = send_photo(token, chat_id, image_path, message)
-    else:
-        # Caption too long: photo carries the first chunk, rest as a follow-up.
-        message_id = send_photo(token, chat_id, image_path, message[:CAPTION_LIMIT])
-        send_message(token, chat_id, message[CAPTION_LIMIT:])
+    delivery = Delivery(DELIVERY_FILE, f"{SCHEDULE_FILE.name}:{target_monday}",
+                        {"chat": chat_id, "message": message,
+                         "image": hashlib.sha256(image_path.read_bytes()).hexdigest()},
+                        force=force)
+    message_id = delivery.send("photo", lambda: send_photo(
+        token, chat_id, image_path, message[:CAPTION_LIMIT]))
+    if len(message) > CAPTION_LIMIT:
+        delivery.send("text", lambda: send_message(token, chat_id, message[CAPTION_LIMIT:]))
 
     # Delivery is complete: a failed optional pin must not duplicate the post.
     record_sent(SCHEDULE_FILE, target_monday)
@@ -311,4 +317,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except RequestException:
+        _fail("Telegram request outcome unknown; inspect the chat and delivery journal before retrying.")
+    except (OSError, ValueError, TelegramRejected) as exc:
+        _fail(str(exc))

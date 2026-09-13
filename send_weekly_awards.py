@@ -41,6 +41,7 @@ manual-upload page, so no winner photo is ever written to the repo:
 """
 
 import csv
+import hashlib
 import ftplib
 import html
 import io
@@ -48,11 +49,14 @@ import os
 import secrets
 import ssl
 import sys
-from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
+
+from automation.shared.delivery import Delivery, TelegramRejected
+from automation.shared.telegram import _check
+from automation.awards.rules import tally, pick_winner, VIDEO_TYPES, VOICE_TYPES
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -84,11 +88,6 @@ DEFAULT_BADGE_APP_URL = "https://mehinewe.github.io/weekly-topic-telegram/"
 
 CAPTION_LIMIT = 1024
 API_TIMEOUT = 30
-
-# Which message types count toward each metric.
-VIDEO_TYPES = {"video"}
-VOICE_TYPES = {"voice"}
-
 
 # --- Helpers --------------------------------------------------------------
 
@@ -269,50 +268,13 @@ def mention_html(user_id, first_name):
     return f'<a href="tg://user?id={user_id}">{html.escape(first_name, quote=False)}</a>'
 
 
-def tally(rows, metric):
-    """Count contributions per user for a metric. Returns a Counter."""
-    counts = Counter()
-    if metric == "video":
-        for row in rows:
-            if row.get("type") in VIDEO_TYPES:
-                counts[row["user_id"]] += 1
-    elif metric == "voice":
-        for row in rows:
-            if row.get("type") in VOICE_TYPES:
-                counts[row["user_id"]] += 1
-    elif metric == "social":
-        for row in rows:
-            if row.get("is_reply") == "1":
-                counts[row["user_id"]] += 1
-        if not counts:  # nobody replied — fall back to most messages overall
-            for row in rows:
-                counts[row["user_id"]] += 1
-    else:
-        _fail(f"unknown metric '{metric}' in awards.csv")
-    return counts
-
-
-def pick_winner(counts, exclude=()):
-    """Return (user_id, count) for the top contributor, or None.
-
-    Users in `exclude` are skipped, so someone who already won another award
-    can't win this one too (one person = one badge). Ties are broken by
-    user_id so the result is deterministic.
-    """
-    eligible = {uid: c for uid, c in counts.items() if uid not in exclude}
-    if not eligible:
-        return None
-    best = max(eligible.values())
-    if best <= 0:
-        return None
-    winners = sorted(uid for uid, c in eligible.items() if c == best)
-    return winners[0], best
-
-
 # --- Idempotency guard ----------------------------------------------------
 # Mirrors send_weekly_topic.py's guard: GitHub cron is best-effort, so awards.yml
 # gets backup cron times too. Recording each successful post (keyed by
 # "awards.csv" + the week's Monday) lets a later retry for the same week no-op.
+
+DELIVERY_FILE = BASE_DIR / "award_delivery.json"
+
 
 def already_posted(target_monday):
     """True if awards for this week were already posted, per sent_log.csv."""
@@ -458,7 +420,8 @@ def send_badge(token, chat_id, media_path, caption, button_url):
             files={field: media},
             timeout=API_TIMEOUT,
         )
-    _check(resp, method)
+    body = _check(resp, method)
+    return (body.get("result") or {}).get("message_id")
 
 
 def send_message(token, chat_id, text):
@@ -468,17 +431,8 @@ def send_message(token, chat_id, text):
         data={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
         timeout=API_TIMEOUT,
     )
-    _check(resp, "sendMessage")
-
-
-def _check(resp, what):
-    try:
-        body = resp.json()
-    except ValueError:
-        _fail(f"{what}: non-JSON response (HTTP {resp.status_code}): {resp.text[:300]}")
-    if not body.get("ok"):
-        _fail(f"{what} failed: {body.get('description', resp.text[:300])}")
-    print(f"{what} OK")
+    body = _check(resp, "sendMessage")
+    return (body.get("result") or {}).get("message_id")
 
 
 # --- Main -----------------------------------------------------------------
@@ -539,8 +493,7 @@ def main():
         return
 
     if dry_run:
-        # Names come from a live lookup, which needs a token; without one we
-        # just show the anonymous id so dry runs still work offline.
+        # Previews never contact Telegram, even when credentials are loaded.
         _ftp_ready = all(os.environ.get(k) for k in
                          ("AVATAR_FTP_HOST", "AVATAR_FTP_USER",
                           "AVATAR_FTP_PASSWORD", "AVATAR_PUBLIC_BASE"))
@@ -549,10 +502,8 @@ def main():
         print("--- DRY RUN (nothing sent) ---")
         print(f"  avatar hosting: {avatar_host}")
         for award, uid, count in planned:
-            name = resolve_name(token, chat_id, uid) if (token and chat_id) else f"User {uid}"
-            photo = "?"
-            if token:
-                photo = "yes (flip GIF)" if get_profile_photo(token, uid) else "no (static badge)"
+            name = f"User {uid}"
+            photo = "not fetched during offline preview"
             print(f"  {award['key']}: {name} (id {uid}) — {count} — gif={award['gif']}")
             print(f"    profile photo: {photo}")
             print(f"    fallback button -> {app_url}/?type={award['badge_type']}")
@@ -574,7 +525,20 @@ def main():
     if not chat_id:
         _fail("TELEGRAM_CHAT_ID is not set")
 
+    # Validate every asset before sending anything, and bind retries to the same plan.
+    assets = {}
     for award, uid, count in planned:
+        media = resolve_media(award["gif"])
+        if media is None:
+            raise ValueError(f"Missing badge for {award['key']}; restore it before sending.")
+        assets[award["key"]] = hashlib.sha256(media.read_bytes()).hexdigest()
+    delivery = Delivery(DELIVERY_FILE, target_monday.isoformat(),
+                        {"chat": chat_id, "awards": planned, "assets": assets,
+                         "app_url": app_url}, force=force)
+
+    for award, uid, count in planned:
+        if delivery.done(award["key"] + ":complete"):
+            continue
         media_path = resolve_media(award["gif"])
         if media_path is None:
             print(f"  WARNING: badge file not found for {award['key']} "
@@ -625,10 +589,16 @@ def main():
 
         try:
             if len(caption) <= CAPTION_LIMIT:
-                send_badge(token, chat_id, send_path, caption, button_url)
+                delivery.send(award["key"] + ":badge", lambda: send_badge(
+                    token, chat_id, send_path, caption, button_url))
             else:
-                send_badge(token, chat_id, send_path, caption[:CAPTION_LIMIT], button_url)
-                send_message(token, chat_id, caption[CAPTION_LIMIT:])
+                delivery.send(award["key"] + ":badge", lambda: send_badge(
+                    token, chat_id, send_path, caption[:CAPTION_LIMIT], button_url))
+                delivery.send(award["key"] + ":text", lambda: send_message(
+                    token, chat_id, caption[CAPTION_LIMIT:]))
+            delivery.entry["steps"][award["key"] + ":complete"] = dict(
+                delivery.entry["steps"][award["key"] + ":badge"])
+            delivery.save()
         finally:
             for tmp in (temp_gif, temp_avatar):
                 if tmp is not None and tmp.exists():
@@ -642,4 +612,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except requests.RequestException:
+        _fail("Telegram request outcome unknown; inspect the chat and delivery journal before retrying.")
+    except (OSError, ValueError, TelegramRejected) as exc:
+        _fail(str(exc))
