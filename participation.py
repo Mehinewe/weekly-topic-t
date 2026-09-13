@@ -37,6 +37,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
+from automation.shared.storage import atomic_text_writer, atomic_write_text
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -164,7 +165,7 @@ def load_config():
 def save_config(cfg):
     """Write config back, dropping the injected defaults we can't tell apart is
     fine — we just persist the whole merged dict, pretty-printed."""
-    CONFIG_FILE.write_text(json.dumps(cfg, indent=2, ensure_ascii=False) + "\n",
+    atomic_write_text(CONFIG_FILE, json.dumps(cfg, indent=2, ensure_ascii=False) + "\n",
                            encoding="utf-8")
 
 
@@ -178,7 +179,7 @@ def load_messages():
 
 
 def save_messages(messages):
-    MESSAGES_FILE.write_text(json.dumps(messages, indent=2, ensure_ascii=False) + "\n",
+    atomic_write_text(MESSAGES_FILE, json.dumps(messages, indent=2, ensure_ascii=False) + "\n",
                              encoding="utf-8")
 
 
@@ -267,7 +268,7 @@ def read_rows(path):
 
 
 def write_rows(path, fieldnames, rows):
-    with open(path, "w", newline="", encoding="utf-8") as f:
+    with atomic_text_writer(path) as f:
         w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         w.writeheader()
         for r in rows:

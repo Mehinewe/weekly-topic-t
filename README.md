@@ -75,3 +75,7 @@ Each week you only: drop the new PNG in `images/`, add a row to `schedule.csv`
 ## Notes
 - Telegram caption limit is 1024 chars; longer messages are auto-split (photo + follow-up text).
 - Never commit your real token. `.env` is gitignored; use repo secrets for GitHub Actions.
+
+## Reliability
+
+See [RELIABILITY_GUIDE.md](RELIABILITY_GUIDE.md) for shared code boundaries, offline checks, state ownership, and recovery steps.

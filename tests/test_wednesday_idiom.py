@@ -44,7 +44,7 @@ class IdiomPostingTests(unittest.TestCase):
                                            "TELEGRAM_CHAT_ID": "-123"})
         self.env.start()
         self.addCleanup(self.env.stop)
-        for target, name in (("send_wednesday_idiom.topic.load_dotenv", "dotenv"),
+        for target, name in (("send_wednesday_idiom.load_dotenv", "dotenv"),
                              ("send_wednesday_idiom.topic.send_photo", "photo"),
                              ("send_wednesday_idiom.send_reveal", "reveal"),
                              ("participation.record_topic_post", "register")):

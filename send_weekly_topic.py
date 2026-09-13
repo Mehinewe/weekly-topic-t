@@ -26,7 +26,9 @@ import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-import requests
+from automation.shared.settings import load_dotenv
+from automation.shared.telegram import (API_TIMEOUT, send_photo, send_message,
+                                        pin_message, _check)
 
 # Print UTF-8 so emoji captions don't crash the Windows console (cp1252).
 # This only affects console output; sending to Telegram is always UTF-8.
@@ -53,32 +55,10 @@ SENT_LOG_FILE = BASE_DIR / "sent_log.csv"
 # split: the photo goes out with the first chunk, the rest as a text message.
 CAPTION_LIMIT = 1024
 
-API_TIMEOUT = 30  # seconds
+
 
 
 # --- Helpers --------------------------------------------------------------
-
-def load_dotenv():
-    """
-    Load KEY=VALUE pairs from a local .env file into the environment, if present.
-
-    Used for local runs. On GitHub Actions there is no .env; the secrets come
-    from the environment instead. Existing environment variables are not
-    overwritten.
-    """
-    env_path = BASE_DIR / ".env"
-    if not env_path.exists():
-        return
-    for line in env_path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
-            os.environ[key] = value
-
 
 def _fail(message):
     """Print an error and exit non-zero so the scheduler flags the run."""
@@ -184,62 +164,6 @@ def pick_row(rows, target_monday):
         return past[-1]
 
     _fail(f"no schedule row on or before week of {target_monday}")
-
-
-def send_photo(token, chat_id, image_path, caption):
-    """Send a photo with caption via sendPhoto; return the new message_id."""
-    url = f"https://api.telegram.org/bot{token}/sendPhoto"
-    with image_path.open("rb") as photo:
-        resp = requests.post(
-            url,
-            data={"chat_id": chat_id, "caption": caption},
-            files={"photo": photo},
-            timeout=API_TIMEOUT,
-        )
-    body = _check(resp, "sendPhoto")
-    return (body.get("result") or {}).get("message_id")
-
-
-def pin_message(token, chat_id, message_id):
-    """Pin a message silently (no 'pinned a message' notification to members).
-
-    Requires the bot to be an admin with the 'Pin Messages' permission. A new
-    pin replaces the previous one at the top of the chat.
-    """
-    url = f"https://api.telegram.org/bot{token}/pinChatMessage"
-    resp = requests.post(
-        url,
-        data={
-            "chat_id": chat_id,
-            "message_id": message_id,
-            "disable_notification": True,
-        },
-        timeout=API_TIMEOUT,
-    )
-    _check(resp, "pinChatMessage")
-
-
-def send_message(token, chat_id, text):
-    """Send a plain text message via Telegram sendMessage."""
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    resp = requests.post(
-        url,
-        data={"chat_id": chat_id, "text": text},
-        timeout=API_TIMEOUT,
-    )
-    _check(resp, "sendMessage")
-
-
-def _check(resp, what):
-    """Validate a Telegram API response, failing loudly on errors."""
-    try:
-        body = resp.json()
-    except ValueError:
-        _fail(f"{what}: non-JSON response (HTTP {resp.status_code}): {resp.text[:300]}")
-    if not body.get("ok"):
-        _fail(f"{what} failed: {body.get('description', resp.text[:300])}")
-    print(f"{what} OK")
-    return body
 
 
 # --- Idempotency guard ----------------------------------------------------
@@ -365,10 +289,8 @@ def main():
         message_id = send_photo(token, chat_id, image_path, message[:CAPTION_LIMIT])
         send_message(token, chat_id, message[CAPTION_LIMIT:])
 
-    # Pin the photo (the post's main message) so it sits at the top of the chat.
-    # Needs the bot to be an admin with 'Pin Messages'; a failed pin stops the run.
-    if message_id is not None:
-        pin_message(token, chat_id, message_id)
+    # Delivery is complete: a failed optional pin must not duplicate the post.
+    record_sent(SCHEDULE_FILE, target_monday)
 
     # Record the message id so the participation classifier can recognise
     # "replied to the weekly topic" as English practice. Never let a problem
@@ -380,9 +302,10 @@ def main():
     except Exception as exc:  # noqa: BLE001
         print(f"(could not record topic message id: {exc})", file=sys.stderr)
 
-    # Mark this week done so any repeat run (delayed cron, backup time, manual
-    # re-trigger) skips instead of posting again.
-    record_sent(SCHEDULE_FILE, target_monday)
+    # Pin the photo (the post's main message) so it sits at the top of the chat.
+    # Needs the bot to be an admin with 'Pin Messages'; a failed pin stops the run.
+    if message_id is not None:
+        pin_message(token, chat_id, message_id)
 
     print("Done.")
 

@@ -7,12 +7,15 @@ State is committed by Actions; no Telegram updates are consumed here.
 import argparse
 import json
 import os
+import sys
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 
 import requests
 
-import send_weekly_topic as topic
+from automation.shared import telegram as topic
+from automation.shared.settings import load_dotenv
+from automation.shared.storage import atomic_write_text
 
 BASE_DIR = Path(__file__).resolve().parent
 SCHEDULE_FILE = BASE_DIR / "idioms_wednesday.json"
@@ -102,10 +105,7 @@ def load_state():
 
 
 def save_state(state):
-    temporary = STATE_FILE.with_suffix(".tmp")
-    temporary.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n",
-                         encoding="utf-8")
-    temporary.replace(STATE_FILE)
+    atomic_write_text(STATE_FILE, json.dumps(state, ensure_ascii=False, indent=2) + "\n")
 
 
 def in_scheduled_window(phase, now):
@@ -130,6 +130,9 @@ def send_reveal(token, chat_id, text, message_id):
 
 
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", choices=("challenge", "reveal"), required=True)
     parser.add_argument("--date", type=date.fromisoformat,
@@ -178,7 +181,7 @@ def main(argv=None):
 
     if args.phase == "reveal" and not entry:
         raise ValueError("Morning challenge was not recorded; refusing an orphan reveal.")
-    topic.load_dotenv()
+    load_dotenv()
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not token or not chat_id:

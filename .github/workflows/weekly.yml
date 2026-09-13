@@ -20,7 +20,7 @@ on:
 # Never let two attempts for the same week overlap: they both read/commit
 # sent_log.csv. A later run waits for the in-flight one rather than racing it.
 concurrency:
-  group: weekly-topic
+  group: telegram-state
   cancel-in-progress: false
 
 jobs:
@@ -52,11 +52,12 @@ jobs:
       # delayed/duplicate run) skip instead of posting again. Skipped on a
       # dry-run preview, which never writes the marker anyway.
       - name: Commit the sent-log
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        if: ${{ always() && !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add sent_log.csv
+          if [[ -f topic_posts.csv ]]; then git add topic_posts.csv; fi
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else

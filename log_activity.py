@@ -37,6 +37,7 @@ import sys
 from datetime import datetime, timezone
 
 import requests
+from automation.shared.storage import atomic_write_text
 
 import participation as P
 import participation_commands as PC
@@ -81,14 +82,16 @@ def read_offset():
         return None
     try:
         data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
-    except (ValueError, OSError):
-        return None
-    last = data.get("last_update_id")
-    return (last + 1) if isinstance(last, int) else None
+    except (ValueError, OSError) as exc:
+        raise ValueError("Cannot read activity cursor; restore activity_state.json before polling.") from exc
+    last = data.get("last_update_id") if isinstance(data, dict) else None
+    if type(last) is not int or last < 0:
+        raise ValueError("Invalid activity cursor; restore activity_state.json before polling.")
+    return last + 1
 
 
 def write_offset(last_update_id):
-    STATE_FILE.write_text(
+    atomic_write_text(STATE_FILE,
         json.dumps({"last_update_id": last_update_id}, indent=2) + "\n",
         encoding="utf-8",
     )
