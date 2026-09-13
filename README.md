@@ -4,6 +4,8 @@
 descriptions. A picture and clue post at 10:32 UTC; the answer, examples, and
 speaking prompt follow at 18:32 UTC. See [IDIOM_GUIDE.md](IDIOM_GUIDE.md) for content,
 previews, and scheduling.
+October 14 introduces a three-picture challenge contrasting phrasal verbs with
+“give”, with sentence gaps and no morning answer choices.
 
 Posts a weekly English **topic** — a PNG image + a message — to your Telegram group
 **automatically every Monday morning**. You prepare the content ahead of time; the bot

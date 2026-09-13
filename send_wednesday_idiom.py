@@ -1,4 +1,4 @@
-"""Post a Wednesday idiom picture, then reply with its evening explanation.
+"""Post a Wednesday vocabulary picture, then reply with its evening explanation.
 
 Preview: python send_wednesday_idiom.py --phase challenge --date 2026-09-16 --dry-run
 State is committed by Actions; no Telegram updates are consumed here.
@@ -23,6 +23,8 @@ REVEAL_TIME = time(18, 32)
 
 
 def messages(row):
+    if row.get("kind") == "phrasal_verbs":
+        return row["challenge"], row["reveal"]
     challenge = (
         "🧩 WEDNESDAY IDIOM CHALLENGE\n\n"
         "Which English idiom does this picture illustrate?\n"
@@ -48,7 +50,15 @@ def load_schedule():
     for row in rows:
         if not isinstance(row, dict):
             raise ValueError("Each idiom must be a JSON object.")
-        for field in ("date", "image", "idiom", "hint", "meaning", "speaking_prompt"):
+        kind = row.get("kind", "idiom")
+        if kind not in ("idiom", "phrasal_verbs"):
+            raise ValueError(f"Unknown Wednesday lesson kind: {kind}")
+        fields = ("date", "image")
+        if kind == "idiom":
+            fields += ("idiom", "hint", "meaning", "speaking_prompt")
+        else:
+            fields += ("title", "challenge", "reveal")
+        for field in fields:
             if not isinstance(row.get(field), str) or not row[field].strip():
                 raise ValueError(f"Idiom has a missing or empty {field}.")
         day = date.fromisoformat(row["date"])
@@ -57,10 +67,11 @@ def load_schedule():
         if day in dates:
             raise ValueError(f"Duplicate idiom date: {day}")
         dates.add(day)
-        examples = row.get("examples")
-        if (not isinstance(examples, list) or len(examples) != 2
-                or any(not isinstance(e, str) or not e.strip() for e in examples)):
-            raise ValueError(f"{day}: supply exactly two example sentences.")
+        if kind == "idiom":
+            examples = row.get("examples")
+            if (not isinstance(examples, list) or len(examples) != 2
+                    or any(not isinstance(e, str) or not e.strip() for e in examples)):
+                raise ValueError(f"{day}: supply exactly two example sentences.")
         image_path = (IMAGES_DIR / row["image"]).resolve()
         if (not image_path.is_relative_to(IMAGES_DIR.resolve())
                 or image_path.suffix.lower() not in (".png", ".jpg", ".jpeg")
@@ -180,7 +191,8 @@ def main(argv=None):
         raise ValueError("Telegram returned no message id; inspect the chat before retrying.")
     if args.phase == "challenge":
         state[key] = {"challenge_message_id": message_id, "reveal_text": reveal,
-                      "idiom": row["idiom"], "challenge_sent_at": now.isoformat()}
+                      "idiom": row.get("idiom", row.get("title")),
+                      "challenge_sent_at": now.isoformat()}
     else:
         state[key].update(reveal_message_id=message_id, reveal_sent_at=now.isoformat())
     save_state(state)

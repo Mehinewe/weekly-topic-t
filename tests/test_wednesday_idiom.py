@@ -75,6 +75,39 @@ class IdiomPostingTests(unittest.TestCase):
         self.reveal.assert_not_called()
         self.register.assert_not_called()
 
+    def test_phrasal_verbs_use_custom_posts_and_preserve_answer_snapshot(self):
+        row = {"date": "2026-09-16", "image": "ice.png", "kind": "phrasal_verbs",
+               "title": "Phrasal verbs with give", "challenge": "Complete with give: I won't ____.",
+               "reveal": "Give up: stop trying. Use two expressions in a story."}
+        self.write_schedule([row])
+        before = self.state.read_bytes()
+        preview = self.run_phase("challenge", "--dry-run")
+        self.assertIn(row["challenge"], preview)
+        self.assertNotIn("give up", preview.lower())
+        self.assertNotIn("IDIOM CHALLENGE", preview)
+        self.assertEqual(self.state.read_bytes(), before)
+        self.run_phase("challenge")
+        self.assertEqual(self.photo.call_args.args[3], row["challenge"])
+        saved = idiom.load_state()[row["date"]]
+        self.assertEqual(saved["idiom"], row["title"])
+        original_answer = row["reveal"]
+        row["reveal"] = "Edited after the morning post"
+        self.write_schedule([row])
+        self.run_phase("reveal")
+        self.assertEqual(self.reveal.call_args.args[2], original_answer)
+
+    def test_phrasal_verbs_validate_custom_content(self):
+        row = {"date": "2026-09-16", "image": "ice.png", "kind": "phrasal_verbs",
+               "title": "Give", "challenge": "A puzzle", "reveal": "An answer"}
+        for change in ({"kind": "unknown"}, {"title": ""}, {"challenge": ""},
+                       {"reveal": None}, {"challenge": "x" * 1025},
+                       {"reveal": "x" * 4097}):
+            with self.subTest(change=next(iter(change))):
+                self.write_schedule([dict(row, **change)])
+                with self.assertRaises(ValueError):
+                    self.run_phase("challenge")
+        self.photo.assert_not_called()
+
     def test_each_phase_sends_once_and_reveal_replies_to_picture(self):
         self.run_phase("challenge")
         self.run_phase("challenge")

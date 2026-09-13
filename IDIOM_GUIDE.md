@@ -1,4 +1,4 @@
-# Wednesday idiom challenges
+# Wednesday vocabulary challenges
 
 Wednesday now has two posts: an illustrated guessing challenge at **10:32 UTC**
 and an answer at **18:32 UTC**, with a meaning, two examples, and a speaking prompt.
@@ -16,12 +16,26 @@ Edit `idioms_wednesday.json`. Each entry needs:
 - `examples`: exactly two natural example sentences.
 - `speaking_prompt`: a question or situation encouraging members to use the idiom.
 
-The first four weeks are ready: September 16, 23, 30, and October 7, 2026.
-**Add the October 14 entry and subsequent weeks before they arrive.** Missing dates
+The first four idiom weeks are ready: September 16, 23, 30, and October 7, 2026.
+October 14 adds a three-scene phrasal-verb challenge using **give** (part 1).
+The morning asks learners to complete gaps without an answer bank; the evening
+contrasts **give in**, **give away**, and **give up**, then asks for an original story.
+**Add the October 21 entry and subsequent weeks before they arrive.** Missing dates
 fail visibly in Actions; the bot never silently reuses an old idiom.
 Duplicate a complete JSON object, change its fields, and upload its illustration.
 Use clear literal visual clues without printing the answer on the image. Preview
 both posts before committing; keep the challenge caption under 1,024 characters.
+
+For a phrasal-verb lesson, set `kind` to `phrasal_verbs`. Supply `date`, `image`,
+`title`, `challenge` (the complete morning caption), and `reveal` (the complete
+evening message) instead of the idiom-specific fields. Use `\n` for line breaks
+inside JSON strings. Do not include the answers in the morning text or artwork.
+The same validation, reply linking, saved answer, and retry protection apply.
+The existing filenames and Actions workflow name remain for compatibility.
+
+Preview October 14 with `python send_wednesday_idiom.py --phase challenge --date
+2026-10-14 --dry-run` (enter this as one command); switch to `--phase reveal`
+to preview the answer.
 
 ## Preview locally
 
