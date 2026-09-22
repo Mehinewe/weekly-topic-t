@@ -47,9 +47,17 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add activity_log.csv activity_state.json members.csv \
-                  participation_config.json participation_messages.json \
-                  pause_requests.csv removals.csv topic_posts.csv 2>/dev/null || true
+          # One git-add-per-file: `git add a b c` aborts ENTIRELY (stages
+          # nothing, not even files that exist) the moment any one pathspec
+          # doesn't match a file — which most of these won't on a fresh
+          # deploy (members.csv / pause_requests.csv / removals.csv are only
+          # created on first use). That silently dropped every commit here
+          # for 13 days. Guard each file so the ones that exist still land.
+          for f in activity_log.csv activity_state.json members.csv \
+                   participation_config.json participation_messages.json \
+                   pause_requests.csv removals.csv topic_posts.csv; do
+            [ -f "$f" ] && git add "$f"
+          done
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else

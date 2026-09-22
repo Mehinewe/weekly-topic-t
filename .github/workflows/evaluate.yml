@@ -59,7 +59,12 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add members.csv participation_eval_log.csv weekly_results.csv removals.csv 2>/dev/null || true
+          # Per-file guard: `git add a b c` aborts entirely (stages nothing)
+          # if any one pathspec doesn't exist yet — see log.yml for the
+          # incident this caused.
+          for f in members.csv participation_eval_log.csv weekly_results.csv removals.csv; do
+            [ -f "$f" ] && git add "$f"
+          done
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
