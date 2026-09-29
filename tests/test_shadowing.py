@@ -117,6 +117,19 @@ class ShadowingTests(unittest.TestCase):
         S.handle_command(message, "t", -1, self.cfg, self.messages, {}, TODAY)
         self.assertEqual(S.load_participants(), {})
 
+    def test_join_link_start_payload_joins_from_the_private_chat(self):
+        message = {"text": "/start join", "from": {"id": 55}, "chat": {"id": 55, "type": "private"}}
+        with patch.object(S, "is_group_member", return_value=True):
+            text = S.handle_command(message, "t", -1, self.cfg, self.messages, {}, TODAY)
+        self.assertIn("American Accent Challenge", text)
+        self.assertNotIn("Start", text)                    # already in the private chat
+        self.assertEqual(list(S.load_participants()), [55])
+        with patch.object(S, "P") as p:
+            p.tg.return_value = {"ok": True, "result": {"username": "MyBot"}}
+            self.assertEqual(S.join_link("t"), "https://t.me/MyBot?start=join")
+            p.tg.return_value = {"ok": False}
+            self.assertIsNone(S.join_link("t"))
+
     def test_dm_join_requires_group_membership(self):
         message = {"text": "/join_challenge", "from": {"id": 99}, "chat": {"id": 99, "type": "private"}}
         with patch.object(S, "is_group_member", return_value=False):

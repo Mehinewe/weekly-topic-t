@@ -25,7 +25,8 @@ The real cut-off for entries is the moment the Thursday showcase starts, not 12:
 
 ## Members
 
-- `/join_challenge` (group or DM) — explicit opt-in. Only members can submit or vote. `/leave_challenge` opts out.
+- **Join link:** `https://t.me/Merv_english_bot?start=join` (print it any time with `python send_shadowing.py --join-link`). Tapping it opens a private chat with the bot; pressing **Start** joins the challenge *and* opens the DM channel for entries and ballots in one step. The Monday video post also carries a "🎤 Join the challenge" button with this link. Only current group members can join this way.
+- `/join_challenge` (group or DM) — the typed alternative. Only members can submit or vote. `/leave_challenge` opts out.
 - They must open a private chat with the bot and press **Start**; the bot can't DM first. Anyone whose ballot can't be delivered is @-mentioned in the group after the showcase and can send `/vote` to the bot to get it.
 - `/vote` (DM) re-sends the ballot; `/vote 3` votes directly. `/myentry` says whether their entry was received.
 - Voting is private, one vote each, no self-votes (their own video isn't a button).

@@ -103,11 +103,15 @@ def send_text(token, chat_id, text):
     return (body.get("result") or {}).get("message_id")
 
 
-def send_video_file(token, chat_id, video, caption):
-    """Upload a repo video (or reuse a `file_id:` value) with a caption."""
+def send_video_file(token, chat_id, video, caption, button_url=None):
+    """Upload a repo video (or reuse a `file_id:` value) with a caption and an
+    optional "Join the challenge" button."""
     long_caption = len(caption) > CAPTION_LIMIT
     fields = {"chat_id": chat_id, "caption": caption[:CAPTION_LIMIT] if long_caption else caption,
               "supports_streaming": "true"}
+    if button_url:
+        fields["reply_markup"] = S.reply_markup(
+            [[{"text": "🎤 Join the challenge", "url": button_url}]])
     if video.startswith("file_id:"):
         body = _post(token, "sendVideo", video=video[len("file_id:"):], **fields)
     else:
@@ -157,7 +161,8 @@ def phase_video(target, state, cfg, messages, token, chat_id, dry_run, force):
         print(f"Video: {row['video']}")
         print(row["message"])
         return False
-    message_id = send_video_file(token, chat_id, row["video"], row["message"])
+    message_id = send_video_file(token, chat_id, row["video"], row["message"],
+                                 S.join_link(token))
     if type(message_id) is not int or message_id <= 0:
         raise ValueError("Telegram returned no message id; inspect the chat before retrying.")
     ws.update(video_message_id=message_id, video_sent_at=P.iso_now())
@@ -383,7 +388,9 @@ def main(argv=None):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", choices=sorted(PHASES), required=True)
+    parser.add_argument("--phase", choices=sorted(PHASES))
+    parser.add_argument("--join-link", action="store_true",
+                        help="Print the t.me link members tap to join the challenge")
     parser.add_argument("--date", type=date.fromisoformat,
                         help="Any date in the target week (default: today, GMT)")
     parser.add_argument("--dry-run", action="store_true")
@@ -392,6 +399,13 @@ def main(argv=None):
     parser.add_argument("--force", action="store_true",
                         help="Re-post the Monday video even if this week is recorded")
     args = parser.parse_args(argv)
+    if args.join_link:
+        load_dotenv()
+        link = S.join_link(os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+        print(link or "Could not look up the bot username; check TELEGRAM_BOT_TOKEN.")
+        return
+    if not args.phase:
+        parser.error("--phase is required (or use --join-link)")
     now = datetime.now(timezone.utc)
     if args.scheduled and args.date:
         parser.error("--scheduled cannot be combined with --date")

@@ -272,6 +272,16 @@ def register_vote(state, week_iso, voter, number, participants, entries_by_user=
 
 # --- commands (group or DM) ----------------------------------------------
 
+JOIN_PAYLOAD = "join"
+
+
+def join_link(token):
+    """Deep link that opens a private chat with the bot and joins on Start, or None."""
+    body = P.tg(token, "getMe")
+    username = (body.get("result") or {}).get("username") if body.get("ok") else None
+    return f"https://t.me/{username}?start={JOIN_PAYLOAD}" if username else None
+
+
 def is_group_member(token, chat_id, user_id):
     body = P.tg(token, "getChatMember", chat_id=chat_id, user_id=user_id)
     status = (body.get("result") or {}).get("status") if body.get("ok") else None
@@ -294,6 +304,8 @@ def handle_command(message, token, main_chat_id, cfg, messages, state, today):
     if sender is None or cmd not in COMMANDS:
         return None
     is_private = (message.get("chat") or {}).get("type") == "private"
+    if cmd == "start" and is_private and args[:1] == [JOIN_PAYLOAD]:
+        cmd = "join_challenge"      # tapped the join link: t.me/<bot>?start=join
     participants = load_participants()
     week = P.monday_of(today).isoformat()
 
