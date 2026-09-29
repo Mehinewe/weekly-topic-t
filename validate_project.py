@@ -58,6 +58,9 @@ def validate_shadowing(cfg):
         raise ValueError("shadowing.enabled must be a boolean")
     if type(settings["ranking_size"]) is not int or not 1 <= settings["ranking_size"] <= 10:
         raise ValueError("shadowing.ranking_size must be an integer from 1 to 10")
+    for day in settings.get("announce_on", []):
+        if P.parse_date(day) is None:
+            raise ValueError(f"Invalid shadowing.announce_on date: {day!r}")
     messages = shadow_core.load_messages()
     for key, text in messages.items():
         if key.startswith("_"):

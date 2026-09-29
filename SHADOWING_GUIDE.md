@@ -17,6 +17,21 @@ All times are **GMT**.
 Each phase has two later catch-up cron slots (+2 h, +4 h) and is idempotent, so a late or dropped GitHub run is safe.
 The real cut-off for entries is the moment the Thursday showcase starts, not 12:00.
 
+## Different dates for one week (e.g. the launch week)
+
+Add optional columns to `schedule_shadowing.csv`: `video_date`, `showcase_date`, `results_date` (all in that week, in that order). Example, launch week starting Thursday 1 Oct:
+
+```
+date,video,message,video_date,showcase_date,results_date
+2026-09-28,week1.mp4,"caption…",2026-10-01,2026-10-03,2026-10-04
+```
+
+The entry deadline shown to members is always "showcase day 12:00 GMT" and voting closes "results day 15:47 GMT". The workflow runs every day at 10:47 / 12:47 / 14:47 / 15:47 / 17:47 / 19:47 GMT and does `--phase due`: it posts whatever is scheduled for *today* (later slots are catch-ups; everything is idempotent).
+
+## Join announcement
+
+`shadowing_messages.json` → `announcement` (edit the wording there). `shadowing.announce_on` in `participation_config.json` lists the GMT dates it is posted automatically (10:47 GMT). Post it by hand any time with `python send_shadowing.py --phase announce` (or the workflow's `announce` phase).
+
 ## Weekly content
 
 1. Put the video in `videos_shadowing/` (.mp4/.mov/.m4v/.webm, **max 50 MB**; for bigger files use `file_id:<telegram file id>` in the CSV instead).

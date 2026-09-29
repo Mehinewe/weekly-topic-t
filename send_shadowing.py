@@ -1,11 +1,12 @@
 """Shadowing challenge — scheduled posts (all times GMT).
 
-    python send_shadowing.py --phase video    [--date YYYY-MM-DD] [--dry-run]   Monday
-    python send_shadowing.py --phase showcase [--date YYYY-MM-DD] [--dry-run]   Thursday
-    python send_shadowing.py --phase results  [--date YYYY-MM-DD] [--dry-run]   Sunday
+    python send_shadowing.py --phase due                     (what the workflow runs)
+    python send_shadowing.py --phase video|showcase|results|announce [--date YYYY-MM-DD] [--dry-run]
 
-`--date` is any day of the target week. `--scheduled` (used by the workflow)
-skips a delayed run that lands outside its weekday. Every step is recorded in
+A normal week is video Monday, showcase Thursday, results Sunday;
+schedule_shadowing.csv can override each of those dates for a given week.
+`--phase due` runs whatever is due today (GMT) and is safe to repeat. `--date`
+is any day of the target week for the manual phases. Every step is recorded in
 shadowing_state.json as soon as it succeeds, so a re-run resumes instead of
 posting twice. Members' entries and votes arrive through log_activity.py (the
 single getUpdates poller); nothing here reads Telegram updates.
@@ -18,7 +19,7 @@ import html
 import os
 import sys
 import time as _time
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -40,12 +41,11 @@ CAPTION_LIMIT = 1024
 UPLOAD_LIMIT = 50 * 1024 * 1024        # Bot API upload cap for sendVideo
 SEND_PAUSE = 3                          # seconds between group posts (group rate limit)
 
-# Weekday (Mon=0) and earliest GMT time each phase may run.
-PHASE_WINDOWS = {
-    "video": (0, time(10, 47)),
-    "showcase": (3, time(15, 47)),
-    "results": (6, time(15, 47)),
-}
+# Earliest GMT time each phase may run on its day (the workflow adds later catch-ups).
+VIDEO_TIME = time(10, 47)
+SHOWCASE_TIME = time(15, 47)
+RESULTS_TIME = time(15, 47)
+ANNOUNCE_TIME = time(10, 47)
 
 
 # --- schedule ---------------------------------------------------------------
@@ -72,7 +72,26 @@ def load_schedule():
             weeks.add(monday)
             if not video.startswith("file_id:") and resolve_video(video) is None:
                 raise ValueError(f"{monday}: video not found in {VIDEOS_DIR.name}/: {video}")
-            rows.append({"monday": monday, "video": video, "message": message})
+            video_on, showcase_on, results_on = S.default_dates(monday)
+            for column in ("video_date", "showcase_date", "results_date"):
+                text = (raw.get(column) or "").strip()
+                if not text:
+                    continue
+                parsed = P.parse_date(text)
+                if parsed is None:
+                    raise ValueError(f"{monday}: bad {column}: {text!r}")
+                if column == "video_date":
+                    video_on = parsed
+                elif column == "showcase_date":
+                    showcase_on = parsed
+                else:
+                    results_on = parsed
+            if not (monday <= video_on <= showcase_on <= results_on <= monday + timedelta(days=6)):
+                raise ValueError(f"{monday}: video, showcase and results dates must be in order "
+                                 "and fall in that week")
+            rows.append({"monday": monday, "video": video, "message": message,
+                         "video_on": video_on, "showcase_on": showcase_on,
+                         "results_on": results_on})
     return rows
 
 
@@ -97,9 +116,13 @@ def _post(token, method, **fields):
     return tgshared._check(resp, method)
 
 
-def send_text(token, chat_id, text):
+def send_text(token, chat_id, text, button=None):
+    """`button` = (label, url) adds a single inline URL button."""
+    extra = {}
+    if button:
+        extra["reply_markup"] = S.reply_markup([[{"text": button[0], "url": button[1]}]])
     body = _post(token, "sendMessage", chat_id=chat_id, text=text, parse_mode="HTML",
-                 disable_web_page_preview=True)
+                 disable_web_page_preview=True, **extra)
     return (body.get("result") or {}).get("message_id")
 
 
@@ -165,7 +188,10 @@ def phase_video(target, state, cfg, messages, token, chat_id, dry_run, force):
                                  S.join_link(token))
     if type(message_id) is not int or message_id <= 0:
         raise ValueError("Telegram returned no message id; inspect the chat before retrying.")
-    ws.update(video_message_id=message_id, video_sent_at=P.iso_now())
+    ws.update(video_message_id=message_id, video_sent_at=P.iso_now(),
+              showcase_on=row["showcase_on"].isoformat(), results_on=row["results_on"].isoformat(),
+              deadline=f"{S.WEEKDAYS[row['showcase_on'].weekday()]} {S.DEADLINE_CLOCK}",
+              vote_close=f"{S.WEEKDAYS[row['results_on'].weekday()]} {S.CLOSE_CLOCK}")
     S.save_state(state)
     try:
         P.record_topic_post(message_id, chat_id, "shadowing_video")
@@ -212,7 +238,8 @@ def phase_showcase(target, state, cfg, messages, token, chat_id, dry_run, force)
         ws.update(numbering=numbering, entry_count=count)
         S.save_state(state)
     if not ws.get("intro_sent"):
-        send_text(token, chat_id, S.msg(messages, "showcase_intro", count=count))
+        send_text(token, chat_id, S.msg(messages, "showcase_intro", count=count,
+                                        vote_close=S.close_text(state, week)))
         ws["intro_sent"] = True
         S.save_state(state)
     sent_numbers = ws.setdefault("entries_sent", [])
@@ -229,7 +256,8 @@ def phase_showcase(target, state, cfg, messages, token, chat_id, dry_run, force)
     for voter in sorted(S.load_participants()):
         if voter in ballots or voter in failed:
             continue
-        ok, reason = S.send_ballot(token, voter, week, numbering, messages)
+        ok, reason = S.send_ballot(token, voter, week, numbering, messages,
+                                   vote_close=S.close_text(state, week))
         (ballots if ok else failed).append(voter)
         S.save_state(state)
         _time.sleep(1)
@@ -372,30 +400,63 @@ def post_winner_badge(token, chat_id, winner, messages):
                 tmp.unlink()
 
 
-PHASES = {"video": phase_video, "showcase": phase_showcase, "results": phase_results}
+def phase_announce(target, state, cfg, messages, token, chat_id, dry_run, force):
+    """Post the 'join the challenge' announcement with a join button."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    text = S.msg(messages, "announcement")
+    link = None if dry_run else S.join_link(token)
+    if dry_run:
+        print("--- DRY RUN: announcement (nothing sent or written) ---")
+        print(text)
+        return False
+    send_text(token, chat_id, text, ("🎤 Join the challenge", link) if link else None)
+    announced = state.setdefault("_announced", [])
+    if today not in announced:
+        announced.append(today)
+    S.save_state(state)
+    print(f"Done: announcement posted ({today}).")
+    return True
+
+
+PHASES = {"video": phase_video, "showcase": phase_showcase, "results": phase_results,
+          "announce": phase_announce}
+
+
+def due_actions(state, rows, cfg, now):
+    """[(phase, monday)] due right now (GMT). Pure: decides only; the phases
+    themselves skip anything already done, so repeating a run is harmless."""
+    today, clock = now.date(), now.time()
+    actions = []
+    announced = state.get("_announced", [])
+    if (today.isoformat() in S.settings(cfg).get("announce_on", [])
+            and today.isoformat() not in announced and clock >= ANNOUNCE_TIME):
+        actions.append(("announce", P.monday_of(today)))
+    for row in rows:
+        if row["video_on"] == today and clock >= VIDEO_TIME:
+            actions.append(("video", row["monday"]))
+    for week in sorted(k for k in state if not k.startswith("_")):
+        ws = state[week]
+        monday = date.fromisoformat(week)
+        if ws.get("showcase_on") == today.isoformat() and clock >= SHOWCASE_TIME:
+            actions.append(("showcase", monday))
+        if ws.get("results_on") == today.isoformat() and clock >= RESULTS_TIME:
+            actions.append(("results", monday))
+    return actions
 
 
 # --- entry point ---------------------------------------------------------------------
-
-def in_scheduled_window(phase, now):
-    weekday, earliest = PHASE_WINDOWS[phase]
-    now = now.astimezone(timezone.utc)
-    return now.weekday() == weekday and now.time() >= earliest
-
 
 def main(argv=None):
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", choices=sorted(PHASES))
+    parser.add_argument("--phase", choices=sorted(PHASES) + ["due"])
     parser.add_argument("--join-link", action="store_true",
                         help="Print the t.me link members tap to join the challenge")
     parser.add_argument("--date", type=date.fromisoformat,
                         help="Any date in the target week (default: today, GMT)")
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--scheduled", action="store_true",
-                        help="Skip delayed jobs that land outside their weekday")
     parser.add_argument("--force", action="store_true",
                         help="Re-post the Monday video even if this week is recorded")
     args = parser.parse_args(argv)
@@ -407,11 +468,8 @@ def main(argv=None):
     if not args.phase:
         parser.error("--phase is required (or use --join-link)")
     now = datetime.now(timezone.utc)
-    if args.scheduled and args.date:
-        parser.error("--scheduled cannot be combined with --date")
-    if args.scheduled and not in_scheduled_window(args.phase, now):
-        print("Outside the scheduled GMT window; skipping.")
-        return
+    if args.phase == "due" and args.date:
+        parser.error("--phase due cannot be combined with --date")
     load_dotenv()
     cfg = P.load_config()
     if not S.settings(cfg)["enabled"]:
@@ -424,6 +482,14 @@ def main(argv=None):
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not args.dry_run and (not token or not chat_id):
         raise ValueError("Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID for real sends.")
+    if args.phase == "due":
+        actions = due_actions(state, load_schedule(), cfg, now)
+        if not actions:
+            print("Nothing due right now (GMT).")
+        for phase, monday in actions:
+            print(f"Due: {phase} for week of {monday}")
+            PHASES[phase](monday, state, cfg, messages, token, chat_id, args.dry_run, args.force)
+        return
     PHASES[args.phase](target, state, cfg, messages, token, chat_id, args.dry_run, args.force)
 
 

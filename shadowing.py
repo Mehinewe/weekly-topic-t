@@ -80,6 +80,33 @@ def save_state(state):
     atomic_write_text(STATE_FILE, json.dumps(state, indent=2, ensure_ascii=False) + "\n")
 
 
+WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+DEADLINE_CLOCK = "12:00 GMT"      # entries are due this many hours before the showcase
+CLOSE_CLOCK = "15:47 GMT"
+GENERIC_DEADLINE = "the deadline in each week's video post"
+
+
+def week_keys(state):
+    """Week entries of the state, newest first (top-level keys starting with "_"
+    hold other bookkeeping, e.g. announcement dates)."""
+    return sorted((k for k in state if not k.startswith("_")), reverse=True)
+
+
+def default_dates(monday):
+    """(video, showcase, results) dates of a normal week: Monday, Thursday, Sunday."""
+    return monday, monday + timedelta(days=3), monday + timedelta(days=6)
+
+
+def deadline_text(state):
+    """When entries are due for the week currently open (member-facing, GMT)."""
+    week = submission_week(state)
+    return (week_state(state, week).get("deadline") if week else None) or GENERIC_DEADLINE
+
+
+def close_text(state, week_iso):
+    return week_state(state, week_iso).get("vote_close") or f"Sunday {CLOSE_CLOCK}"
+
+
 def week_state(state, week_iso):
     return state.get(week_iso) or {}
 
@@ -98,14 +125,14 @@ def voting_open(state, week_iso):
 
 def voting_week(state):
     """The most recent week whose voting is open (None if none)."""
-    for week in sorted(state, reverse=True):
+    for week in week_keys(state):
         if voting_open(state, week):
             return week
     return None
 
 
 def submission_week(state):
-    for week in sorted(state, reverse=True):
+    for week in week_keys(state):
         if submissions_open(state, week):
             return week
     return None
@@ -231,12 +258,12 @@ def reply_markup(rows):
     return json.dumps({"inline_keyboard": rows})
 
 
-def send_ballot(token, voter, week_iso, numbering, messages, current_vote=None):
+def send_ballot(token, voter, week_iso, numbering, messages, current_vote=None, vote_close=""):
     """DM a voting ballot. Returns (delivered, reason)."""
     rows = ballot_buttons(week_iso, numbering, voter)
     if not rows:
         return False, "nothing to vote on"
-    text = msg(messages, "ballot")
+    text = msg(messages, "ballot", vote_close=vote_close)
     if current_vote:
         text += "\n\n" + msg(messages, "ballot_current", number=current_vote)
     body = P.tg(token, "sendMessage", http="post", chat_id=voter, text=text,
@@ -288,8 +315,8 @@ def is_group_member(token, chat_id, user_id):
     return status in {"member", "administrator", "creator", "restricted"}
 
 
-def ballot_text(messages, result_text):
-    return msg(messages, "ballot") + "\n\n" + result_text
+def ballot_text(messages, result_text, vote_close=""):
+    return msg(messages, "ballot", vote_close=vote_close) + "\n\n" + result_text
 
 
 def handle_command(message, token, main_chat_id, cfg, messages, state, today):
@@ -318,7 +345,8 @@ def handle_command(message, token, main_chat_id, cfg, messages, state, today):
             key = "join_ok"
         else:
             key = "join_already"
-        return msg(messages, key, private_hint="" if is_private else msg(messages, "join_private_hint"))
+        return msg(messages, key, deadline=deadline_text(state),
+                   private_hint="" if is_private else msg(messages, "join_private_hint"))
 
     if cmd == "leave_challenge":
         if sender in participants:
@@ -331,7 +359,7 @@ def handle_command(message, token, main_chat_id, cfg, messages, state, today):
         if not is_private:
             return None
         key = "start_member" if sender in participants else "start_new"
-        return msg(messages, key)
+        return msg(messages, key, deadline=deadline_text(state))
 
     if cmd == "myentry":
         wk = submission_week(state) or voting_week(state) or week
@@ -353,7 +381,8 @@ def handle_command(message, token, main_chat_id, cfg, messages, state, today):
         # No number typed: (re)send the buttons.
         current = load_votes(wk).get(sender)
         ok, _ = send_ballot(token, sender, wk, numbering, messages,
-                            _number_of(numbering, current) if current else None)
+                            _number_of(numbering, current) if current else None,
+                            close_text(state, wk))
         return None if ok else msg(messages, "vote_no_ballot")
     return None
 

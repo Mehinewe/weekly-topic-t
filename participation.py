@@ -141,7 +141,8 @@ DEFAULT_CONFIG = {
     "enabled": {"reminders": True, "evaluation": True},
     # American Accent shadowing challenge (see shadowing.py). ranking_size = how many
     # places the Sunday results announce; admins change it with /set shadowing_ranking_size.
-    "shadowing": {"enabled": True, "ranking_size": 1},
+    # announce_on: GMT dates (YYYY-MM-DD) on which the join announcement is posted.
+    "shadowing": {"enabled": True, "ranking_size": 1, "announce_on": []},
 }
 
 

@@ -206,7 +206,7 @@ class PhaseTests(unittest.TestCase):
         patcher = patch.object(send._time, "sleep", lambda s: None)
         patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = patch.object(S, "send_ballot", lambda t, v, w, n, m, c=None: (v != 30, "x"))
+        patcher = patch.object(S, "send_ballot", lambda t, v, w, n, m, c=None, vote_close="": (v != 30, "x"))
         patcher.start()
         self.addCleanup(patcher.stop)
         S.save_participants({u: {"user_id": str(u), "joined_at": "x"} for u in (10, 20, 30)})
@@ -277,13 +277,62 @@ class PhaseTests(unittest.TestCase):
         self.assertIn("no votes", self.sent[0][1])
         self.assertTrue(state[WEEK]["results_sent"])
 
-    def test_scheduled_windows_use_gmt_weekdays(self):
-        monday = datetime(2026, 10, 5, 11, 0, tzinfo=timezone.utc)
-        self.assertTrue(send.in_scheduled_window("video", monday))
-        self.assertFalse(send.in_scheduled_window("video", monday.replace(hour=10, minute=0)))
-        self.assertFalse(send.in_scheduled_window("showcase", monday))
-        self.assertTrue(send.in_scheduled_window("showcase", datetime(2026, 10, 8, 16, tzinfo=timezone.utc)))
-        self.assertTrue(send.in_scheduled_window("results", datetime(2026, 10, 11, 16, tzinfo=timezone.utc)))
+    def gmt(self, day, hour, minute=0):
+        return datetime(2026, 10, day, hour, minute, tzinfo=timezone.utc)
+
+    def test_normal_week_is_due_monday_thursday_sunday(self):
+        rows = [{"monday": date(2026, 10, 5), "video_on": date(2026, 10, 5),
+                 "showcase_on": date(2026, 10, 8), "results_on": date(2026, 10, 11)}]
+        state = {WEEK: {"showcase_on": "2026-10-08", "results_on": "2026-10-11"}}
+        due = lambda now, st=state: send.due_actions(st, rows, {}, now)
+        self.assertEqual(due(self.gmt(5, 11)), [("video", date(2026, 10, 5))])
+        self.assertEqual(due(self.gmt(5, 10, 0)), [])                    # before 10:47 GMT
+        self.assertEqual(due(self.gmt(6, 12)), [])
+        self.assertEqual(due(self.gmt(8, 16)), [("showcase", date(2026, 10, 5))])
+        self.assertEqual(due(self.gmt(11, 16)), [("results", date(2026, 10, 5))])
+
+    def test_first_week_override_uses_its_own_dates(self):
+        root = Path(self.tmp.name)
+        (root / "clip.mp4").write_bytes(b"x")
+        (root / "s.csv").write_text(
+            "date,video,message,video_date,showcase_date,results_date\n"
+            "2026-09-28,clip.mp4,hello,2026-10-01,2026-10-03,2026-10-04\n", encoding="utf-8")
+        with patch.object(send, "SCHEDULE_FILE", root / "s.csv"), patch.object(send, "VIDEOS_DIR", root):
+            rows = send.load_schedule()
+        self.assertEqual((rows[0]["video_on"], rows[0]["showcase_on"], rows[0]["results_on"]),
+                         (date(2026, 10, 1), date(2026, 10, 3), date(2026, 10, 4)))
+        # video goes out Thursday; the state then carries the week's own dates and wording
+        state = {}
+        with patch.object(send, "send_video_file", return_value=7), \
+                patch.object(send.S, "join_link", return_value=None), \
+                patch.object(send.P, "record_topic_post"), \
+                patch.object(send, "load_schedule", return_value=rows):
+            send.phase_video(date(2026, 9, 28), state, {}, self.messages, "t", "-1", False, False)
+        ws = state["2026-09-28"]
+        self.assertEqual((ws["showcase_on"], ws["results_on"]), ("2026-10-03", "2026-10-04"))
+        self.assertEqual((ws["deadline"], ws["vote_close"]), ("Saturday 12:00 GMT", "Sunday 15:47 GMT"))
+        # the Thursday 15:47 GMT run must NOT showcase; Saturday's does
+        self.assertEqual([a for a, _ in send.due_actions(state, rows, {}, self.gmt(1, 16))], ["video"])
+        self.assertEqual(send.due_actions(state, rows, {}, self.gmt(3, 16)),
+                         [("showcase", date(2026, 9, 28))])
+        self.assertIn("Saturday 12:00 GMT", S.deadline_text(state))
+
+    def test_schedule_rejects_out_of_order_dates(self):
+        root = Path(self.tmp.name)
+        (root / "clip.mp4").write_bytes(b"x")
+        (root / "s.csv").write_text(
+            "date,video,message,showcase_date,results_date\n"
+            "2026-10-05,clip.mp4,hello,2026-10-09,2026-10-08\n", encoding="utf-8")
+        with patch.object(send, "SCHEDULE_FILE", root / "s.csv"), patch.object(send, "VIDEOS_DIR", root):
+            with self.assertRaises(ValueError):
+                send.load_schedule()
+
+    def test_announcement_is_due_on_configured_dates_once(self):
+        cfg = {"shadowing": {"announce_on": ["2026-09-30"]}}
+        now = datetime(2026, 9, 30, 11, tzinfo=timezone.utc)
+        self.assertEqual(send.due_actions({}, [], cfg, now)[0][0], "announce")
+        self.assertEqual(send.due_actions({"_announced": ["2026-09-30"]}, [], cfg, now), [])
+        self.assertEqual(send.due_actions({}, [], cfg, now.replace(day=29)), [])
 
 
 if __name__ == "__main__":

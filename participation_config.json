@@ -51,5 +51,11 @@
   "enabled": {
     "reminders": true,
     "evaluation": true
+  },
+
+  "shadowing": {
+    "enabled": true,
+    "ranking_size": 1,
+    "announce_on": ["2026-09-30"]
   }
 }

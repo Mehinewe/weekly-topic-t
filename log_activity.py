@@ -249,7 +249,7 @@ def handle_ballot_tap(token, callback, cfg, sh_messages, sh_state):
     numbering = (sh_state.get(week_iso) or {}).get("numbering") or {}
     rows = SH.ballot_buttons(week_iso, numbering, voter) if SH.voting_open(sh_state, week_iso) else []
     fields = dict(chat_id=chat_id, message_id=message_id, parse_mode="HTML",
-                  text=SH.ballot_text(sh_messages, text))
+                  text=SH.ballot_text(sh_messages, text, SH.close_text(sh_state, week_iso)))
     if rows:
         fields["reply_markup"] = SH.reply_markup(rows)
     P.tg(token, "editMessageText", http="post", **fields)

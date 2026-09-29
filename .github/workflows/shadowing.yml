@@ -2,30 +2,30 @@ name: Shadowing challenge
 
 on:
   schedule:
-    # All times GMT. Each phase has a primary slot plus two later catch-ups
-    # (GitHub cron is best-effort); the script is idempotent, so only the first
-    # run that lands does anything.
-    - cron: "47 10 * * 1"  # Monday   - post the weekly shadowing video
-    - cron: "47 12 * * 1"
-    - cron: "47 14 * * 1"
-    - cron: "47 15 * * 4"  # Thursday - showcase the entries + send ballots
-    - cron: "47 17 * * 4"
-    - cron: "47 19 * * 4"
-    - cron: "47 15 * * 0"  # Sunday   - close voting, announce winner
-    - cron: "47 17 * * 0"
-    - cron: "47 19 * * 0"
+    # GMT. Runs every day at these times; `send_shadowing.py --phase due` decides
+    # what (if anything) is due today from schedule_shadowing.csv / shadowing_state.json
+    # (video, Thursday-style showcase, results, join announcement). The later slots
+    # are catch-ups for GitHub's best-effort cron; every phase is idempotent.
+    - cron: "47 10 * * *"
+    - cron: "47 12 * * *"
+    - cron: "47 14 * * *"
+    - cron: "47 15 * * *"
+    - cron: "47 17 * * *"
+    - cron: "47 19 * * *"
   workflow_dispatch:
     inputs:
       phase:
-        description: "Which phase to preview or send"
+        description: "Which phase to preview or send (due = whatever is due right now)"
         type: choice
         options:
+          - due
+          - announce
           - video
           - showcase
           - results
-        default: video
+        default: due
       date:
-        description: "Any date in the target week, YYYY-MM-DD (blank = today, GMT)"
+        description: "Any date in the target week, YYYY-MM-DD (blank = today, GMT; not for 'due')"
         type: string
         default: ""
       dry_run:
@@ -64,22 +64,15 @@ jobs:
           AVATAR_FTP_TLS: ${{ vars.AVATAR_FTP_TLS }}
           BADGE_APP_URL: ${{ vars.BADGE_APP_URL }}
           EVENT_NAME: ${{ github.event_name }}
-          SCHEDULE: ${{ github.event.schedule }}
           MANUAL_PHASE: ${{ inputs.phase }}
           TARGET_DATE: ${{ inputs.date }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
           if [[ "$EVENT_NAME" == "schedule" ]]; then
-            case "$SCHEDULE" in
-              *" * * 1") phase=video ;;
-              *" * * 4") phase=showcase ;;
-              *" * * 0") phase=results ;;
-              *) echo "Unknown schedule" >&2; exit 1 ;;
-            esac
-            args=(--phase "$phase" --scheduled)
+            args=(--phase due)
           else
             args=(--phase "$MANUAL_PHASE")
-            if [[ -n "$TARGET_DATE" ]]; then args+=(--date "$TARGET_DATE"); fi
+            if [[ -n "$TARGET_DATE" && "$MANUAL_PHASE" != "due" ]]; then args+=(--date "$TARGET_DATE"); fi
           fi
           if [[ "$DRY_RUN" == "true" ]]; then args+=(--dry-run); fi
           python send_shadowing.py "${args[@]}"
@@ -90,7 +83,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add shadowing_state.json topic_posts.csv 2>/dev/null || true
+          for f in shadowing_state.json topic_posts.csv; do
+            [ -f "$f" ] && git add "$f"
+          done
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
