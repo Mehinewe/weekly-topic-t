@@ -13,7 +13,11 @@ an illustrated idiom challenge at 10:32 UTC and a reply with the answer at
 `idiom_sent_log.json` (intentionally committed). See [IDIOM_GUIDE.md](IDIOM_GUIDE.md).
 References below to the old Wednesday image schedule describe the retired flow;
 `schedule_wednesday.csv` and `images_wednesday/` are retained only as references.
-Two features share the same bot token / chat id (repo secrets `TELEGRAM_BOT_TOKEN`,
+**Shadowing challenge** (`shadowing.py`, `send_shadowing.py`, `shadowing.yml`, `shadowing_*.csv/json`):
+weekly shadowing video Monday, private DM entries, anonymous showcase + DM button ballots Thursday,
+winner + badge Sunday. All user-facing times say **GMT**, never UTC. The poller handles DMs and
+`callback_query` votes; only `send_shadowing.py` writes `shadowing_state.json`. See [SHADOWING_GUIDE.md](SHADOWING_GUIDE.md).
+Features below share the same bot token / chat id (repo secrets `TELEGRAM_BOT_TOKEN`,
 `TELEGRAM_CHAT_ID`):
 
 1. **Weekly topic poster** — posts a prepared image + caption every Monday. Stateless,

@@ -139,6 +139,9 @@ DEFAULT_CONFIG = {
     "admin_user_ids": [],
     "admin_chat_id": None,
     "enabled": {"reminders": True, "evaluation": True},
+    # American Accent shadowing challenge (see shadowing.py). ranking_size = how many
+    # places the Sunday results announce; admins change it with /set shadowing_ranking_size.
+    "shadowing": {"enabled": True, "ranking_size": 1},
 }
 
 

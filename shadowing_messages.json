@@ -1,0 +1,47 @@
+{
+  "_comment": "Every message the shadowing challenge sends. Placeholders in {curly braces} are filled in at send time; an unknown placeholder becomes empty. HTML is allowed (<b>, <i>).",
+
+  "join_ok": "🎉 <b>You're in the American Accent Challenge!</b>\n\nEvery Monday I post a shadowing video. Shadow it, then send your video to me <b>in a private chat</b> by <b>Thursday 12:00 GMT</b>.\n\nOn Thursday all entries are shown anonymously (Video 1, Video 2…) and you vote for the best one in private. Good luck! 🎤{private_hint}",
+  "join_already": "You're already in the challenge ✅{private_hint}",
+  "join_not_in_group": "You need to be a member of the group to join the challenge.",
+  "join_private_hint": "\n\n👉 Open a private chat with me and press <b>Start</b> — otherwise I can't receive your video or send you your ballot.",
+  "leave_ok": "You've left the challenge. Send /join_challenge any time to come back.",
+  "leave_not_in": "You're not in the challenge. Send /join_challenge to join.",
+
+  "start_new": "👋 Hi! This bot runs the American Accent Challenge.\n\nSend /join_challenge to take part. Then send me your weekly shadowing video here, in this private chat.",
+  "start_member": "👋 You're in the challenge. Send me your shadowing video here any time from Monday until Thursday 12:00 GMT.",
+
+  "submit_ok": "✅ Got your shadowing video! You can send another one to replace it until Thursday's deadline.",
+  "submit_replaced": "🔄 Replaced your earlier entry with this new video.",
+  "submit_not_member": "Send /join_challenge first to take part in the challenge — then send your video again.",
+  "submit_none_open": "There's no shadowing video open right now. I'll post the next one on Monday.",
+  "submit_closed": "This week's entries are closed — voting has started. Your next chance is Monday!",
+  "dm_unknown": "Send me your shadowing as a video (or video message). Commands: /join_challenge, /vote, /myentry.",
+
+  "myentry_yes": "✅ I have your entry for this week.",
+  "myentry_no": "I don't have an entry from you yet this week. Send your shadowing video here.",
+
+  "ballot": "🗳️ <b>Vote for the best shadowing!</b>\n\nTap the video number you think is the best. Your vote is private. You can change it until voting closes on Sunday 15:47 GMT.\n\n(Your own video isn't listed.)",
+  "ballot_current": "Your current vote: <b>Video {number}</b>",
+  "vote_ok": "✅ Vote recorded: <b>Video {number}</b>. You can change it until voting closes.",
+  "vote_closed": "Voting isn't open right now.",
+  "vote_not_member": "Only challenge members can vote. Send /join_challenge first.",
+  "vote_bad_number": "There's no Video with that number. Pick 1–{count}.",
+  "vote_own": "You can't vote for your own video 😉 Pick another one.",
+  "vote_dm_only": "Votes are private — send /vote to me in a private chat.",
+  "vote_no_ballot": "I couldn't send you the ballot. Try /vote again in a private chat.",
+
+  "showcase_intro": "🎬 <b>Shadowing showcase — vote time!</b>\n\n{count} entries this week, shown anonymously below (Video 1 … Video {count}).\n\n🗳️ I've sent every challenge member a private ballot with buttons. Voting closes <b>Sunday 15:47 GMT</b>.",
+  "showcase_dm_missing": "\n\n📩 {names} — I couldn't DM you your ballot. Open a private chat with me, press <b>Start</b>, then send /vote.",
+  "showcase_none": "🎬 No shadowing entries this week. Next video on Monday — send yours in a private chat with me! 🎤",
+  "showcase_one": "🎬 Only one entry this week, so there's nothing to vote on. Well done to whoever it was! Next video on Monday. 🎤",
+
+  "results_header": "🏆 <b>Shadowing results — week of {week}</b>",
+  "results_winner": "🥇 <b>{name}</b>",
+  "results_place": "{medal} <b>{name}</b>",
+  "results_tiebreak": "\nTied on votes — the earliest submission takes the place.",
+  "results_none": "🏆 Voting is closed, but no votes came in this week. See you Monday! 🎤",
+  "results_footer": "Congratulations! 👏 Thanks to everyone who took part.",
+
+  "winner_badge": "🏆 SHADOWING CHAMPION! 🎤\n\nCongratulations {name}!\n\nYou won this week's shadowing vote — your American accent impressed the group most.\n\nClick the button below to get a profile picture with your badge and wear it with pride!"
+}

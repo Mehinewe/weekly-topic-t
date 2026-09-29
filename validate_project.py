@@ -5,6 +5,8 @@ import participation as P
 import send_weekly_awards as awards
 import send_weekly_topic as topics
 import send_wednesday_idiom as idioms
+import send_shadowing as shadowing
+import shadowing as shadow_core
 
 
 def validate_participation(cfg, messages):
@@ -50,6 +52,28 @@ def validate_awards(rows):
             raise ValueError(f"Missing content or media for award {row['key']}")
 
 
+def validate_shadowing(cfg):
+    settings = shadow_core.settings(cfg)
+    if type(settings["enabled"]) is not bool:
+        raise ValueError("shadowing.enabled must be a boolean")
+    if type(settings["ranking_size"]) is not int or not 1 <= settings["ranking_size"] <= 10:
+        raise ValueError("shadowing.ranking_size must be an integer from 1 to 10")
+    messages = shadow_core.load_messages()
+    for key, text in messages.items():
+        if key.startswith("_"):
+            continue
+        if not isinstance(text, str) or not text.strip():
+            raise ValueError(f"Missing shadowing message: {key}")
+        try:
+            list(string.Formatter().parse(text))
+        except ValueError:
+            raise ValueError(f"Malformed shadowing template: {key}") from None
+        if "UTC" in text:
+            raise ValueError(f"Shadowing message {key} says UTC; members should see GMT")
+    shadow_core.load_state()
+    return len(shadowing.load_schedule())
+
+
 def main():
     rows = topics.load_schedule()
     weeks = set()
@@ -65,9 +89,12 @@ def main():
     lessons = idioms.load_schedule()
     award_rows = awards.load_awards()
     validate_awards(award_rows)
-    validate_participation(P.load_config(), P.load_messages())
+    cfg = P.load_config()
+    validate_participation(cfg, P.load_messages())
+    shadowing_weeks = validate_shadowing(cfg)
     print(f"Validated {len(rows)} topics, {len(lessons)} Wednesday lessons, "
-          f"{len(award_rows)} awards, and reminder/evaluation configuration.")
+          f"{len(award_rows)} awards, {shadowing_weeks} shadowing weeks, and "
+          "reminder/evaluation configuration.")
 
 
 if __name__ == "__main__":

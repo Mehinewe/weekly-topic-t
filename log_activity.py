@@ -41,6 +41,7 @@ from automation.shared.storage import atomic_write_text
 
 import participation as P
 import participation_commands as PC
+import shadowing as SH
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -59,7 +60,7 @@ LOG_FIELDS = P.ACTIVITY_FIELDS  # iso_time, week_monday, user_id, type, is_reply
 
 # Update types we ask Telegram for. chat_member only arrives if the bot is an
 # admin; requesting it when it isn't is harmless.
-ALLOWED_UPDATES = ["message", "chat_member", "my_chat_member"]
+ALLOWED_UPDATES = ["message", "chat_member", "my_chat_member", "callback_query"]
 
 
 # --- unchanged helpers --------------------------------------------------
@@ -195,6 +196,65 @@ def sweep_members(members, cfg, token, messages, today, changed):
                 changed.add("members")
 
 
+# --- shadowing challenge: DMs + ballot buttons -------------------------------------
+
+def handle_private(token, target_chat, message, cfg, sh_messages, sh_state, members,
+                   today, new_rows, changed):
+    """A message sent to the bot in a private chat. Only shadowing things are handled:
+    its commands and video / video-note submissions. Anything else is ignored."""
+    sender = message.get("from") or {}
+    uid = sender.get("id")
+    if uid is None or sender.get("is_bot"):
+        return
+    chat_id = (message.get("chat") or {}).get("id")
+    text = message.get("text") or ""
+    if text.lstrip().startswith("/"):
+        cmd = text.split()[0].split("@", 1)[0].lower().lstrip("/")
+        if cmd in SH.COMMANDS:
+            reply = SH.handle_command(message, token, target_chat, cfg, sh_messages,
+                                      sh_state, today)
+            if reply:
+                P.send_chat(token, chat_id, reply)
+        return
+    if "video" not in message and "video_note" not in message:
+        return
+    reply, activity = SH.handle_submission(message, cfg, sh_messages, sh_state, today)
+    P.send_chat(token, chat_id, reply)
+    if activity:
+        # A DM'd shadowing video counts as a practice day (activity type "shadowing":
+        # not a Video Shark video).
+        new_rows.append(activity)
+        sent = datetime.fromtimestamp(message.get("date", 0), tz=timezone.utc)
+        touch_member(members, uid, sent.isoformat(), cfg, today, changed)
+        m = members.get(uid)
+        if m and m.get("last_active_week") != activity["week_monday"]:
+            m["last_active_week"] = activity["week_monday"]
+            changed.add("members")
+
+
+def handle_ballot_tap(token, callback, cfg, sh_messages, sh_state):
+    """Record the vote, then rewrite the ballot message to confirm it (the tap's own
+    answer would already have expired by the time this ~10-minute poller runs)."""
+    result = SH.handle_callback(callback, cfg, sh_messages, sh_state)
+    if result is None:
+        return
+    ok, text, week_iso = result
+    P.tg(token, "answerCallbackQuery", http="post", callback_query_id=callback.get("id"))
+    ballot = callback.get("message") or {}
+    chat_id = (ballot.get("chat") or {}).get("id")
+    message_id = ballot.get("message_id")
+    if chat_id is None or message_id is None:
+        return
+    voter = (callback.get("from") or {}).get("id")
+    numbering = (sh_state.get(week_iso) or {}).get("numbering") or {}
+    rows = SH.ballot_buttons(week_iso, numbering, voter) if SH.voting_open(sh_state, week_iso) else []
+    fields = dict(chat_id=chat_id, message_id=message_id, parse_mode="HTML",
+                  text=SH.ballot_text(sh_messages, text))
+    if rows:
+        fields["reply_markup"] = SH.reply_markup(rows)
+    P.tg(token, "editMessageText", http="post", **fields)
+
+
 # --- main -------------------------------------------------------------
 
 def main():
@@ -215,6 +275,9 @@ def main():
     messages = P.load_messages()
     P.migrate_activity_log()
     topic_ids = P.load_topic_message_ids()
+
+    sh_messages = SH.load_messages()
+    sh_state = SH.load_state()   # read-only here; only send_shadowing.py writes it
 
     changed = set()  # which state files to write: "members", "config", "messages"
     members = P.load_members()
@@ -263,6 +326,15 @@ def main():
                     on_leave(members, user, changed)
                 continue
 
+            # --- shadowing ballot button tapped ---
+            callback = upd.get("callback_query")
+            if callback:
+                try:
+                    handle_ballot_tap(token, callback, cfg, sh_messages, sh_state)
+                except Exception as exc:   # never let one bad tap abort the run
+                    print(f"ballot error: {type(exc).__name__}", file=sys.stderr)
+                continue
+
             message = upd.get("message")
             if not message:
                 continue
@@ -277,6 +349,12 @@ def main():
             in_main = msg_chat == target_chat
             in_admin_chat = admin_chat is not None and msg_chat == admin_chat
             if not (in_main or in_admin_chat):
+                if (message.get("chat") or {}).get("type") == "private":
+                    try:
+                        handle_private(token, target_chat, message, cfg, sh_messages,
+                                       sh_state, members, today, new_rows, changed)
+                    except Exception as exc:   # never let one bad DM abort the run
+                        print(f"private message error: {type(exc).__name__}", file=sys.stderr)
                 continue
 
             sender = message.get("from") or {}

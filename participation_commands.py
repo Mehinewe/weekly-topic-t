@@ -14,6 +14,8 @@ Members:
   /pause [weeks] [reason]   request a break (admin-approved by default)
   /mystatus                 your own weekly progress + strike state
   /rules                    the participation rule
+  /join_challenge           join the American Accent shadowing challenge
+  /leave_challenge | /vote | /myentry   (see shadowing.py; /vote works in DM)
   /help
 
 Admins:
@@ -36,6 +38,7 @@ import os
 from datetime import timedelta
 
 import participation as P
+import shadowing
 
 
 # name -> (dotted config path, type)
@@ -64,6 +67,8 @@ SETTABLE = {
     "grace_extra_weeks":       ("grace_extra_weeks", "int"),
     "max_removals_per_run":    ("max_removals_per_run", "int"),
     "tracking_starts":         ("tracking_starts", "str_or_none"),
+    "shadowing_ranking_size":  ("shadowing.ranking_size", "int"),
+    "shadowing_enabled":       ("shadowing.enabled", "bool"),
 }
 
 _TRUE = {"on", "true", "yes", "1", "enable", "enabled"}
@@ -189,6 +194,8 @@ def handle_command(message, ctx):
         "rules": _cmd_rules,
         "help": _cmd_help,
     }
+    for shadow_cmd in shadowing.COMMANDS:
+        member_cmds[shadow_cmd] = _cmd_shadowing
     admin_cmds = {
         "report": _cmd_report,
         "member": _cmd_member,
@@ -217,6 +224,15 @@ def handle_command(message, ctx):
 
 
 # --- member commands ------------------------------------------------
+
+def _cmd_shadowing(message, ctx, sender, args, raw=""):
+    """/join_challenge, /leave_challenge, /vote, /myentry - see shadowing.py."""
+    reply = shadowing.handle_command(message, ctx.token, ctx.main_chat_id, ctx.cfg,
+                                     shadowing.load_messages(), shadowing.load_state(),
+                                     ctx.today)
+    if reply:
+        _reply(ctx, message, reply)
+
 
 def _cmd_pause(message, ctx, sender, args, raw=""):
     cfg = ctx.cfg
@@ -307,7 +323,8 @@ def _cmd_help(message, ctx, sender, args, raw=""):
     lines = ["<b>Participation commands</b>",
              "/rules — the weekly rule",
              "/mystatus — your progress this week",
-             "/pause [weeks] [reason] — request a break"]
+             "/pause [weeks] [reason] — request a break",
+             "/join_challenge — join the shadowing challenge"]
     if _is_admin(ctx, sender):
         lines += ["",
                   "<b>Admin</b>",

@@ -55,7 +55,8 @@ jobs:
           # for 13 days. Guard each file so the ones that exist still land.
           for f in activity_log.csv activity_state.json members.csv \
                    participation_config.json participation_messages.json \
-                   pause_requests.csv removals.csv topic_posts.csv; do
+                   pause_requests.csv removals.csv topic_posts.csv \
+                   shadowing_participants.csv shadowing_entries.csv shadowing_votes.csv; do
             [ -f "$f" ] && git add "$f"
           done
           if git diff --cached --quiet; then
