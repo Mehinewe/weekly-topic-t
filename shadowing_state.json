@@ -2,5 +2,13 @@
   "_announced": [
     "2026-09-29",
     "2026-09-30"
-  ]
+  ],
+  "2026-09-28": {
+    "video_message_id": 4501,
+    "video_sent_at": "2026-10-01T17:08:54+00:00",
+    "showcase_on": "2026-10-03",
+    "results_on": "2026-10-04",
+    "deadline": "Saturday 12:00 GMT",
+    "vote_close": "Sunday 15:47 GMT"
+  }
 }
