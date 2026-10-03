@@ -9,6 +9,26 @@
     "showcase_on": "2026-10-03",
     "results_on": "2026-10-04",
     "deadline": "Saturday 12:00 GMT",
-    "vote_close": "Sunday 15:47 GMT"
+    "vote_close": "Sunday 15:47 GMT",
+    "numbering": {
+      "1": 916464267,
+      "2": 7847453913
+    },
+    "entry_count": 2,
+    "intro_sent": true,
+    "entries_sent": [
+      "1",
+      "2"
+    ],
+    "ballots_sent": [
+      916464267,
+      7508017555,
+      7845818180,
+      7847453913,
+      7900897634
+    ],
+    "ballots_failed": [],
+    "showcase_sent": true,
+    "showcase_sent_at": "2026-10-03T16:46:21+00:00"
   }
 }
