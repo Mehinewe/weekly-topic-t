@@ -16,7 +16,7 @@
   "dm_unknown": "Send me your shadowing as a video (or video message). Commands: /join_challenge, /vote, /myentry.",
   "myentry_yes": "✅ I have your entry for this week.",
   "myentry_no": "I don't have an entry from you yet this week. Send your shadowing video here.",
-  "ballot": "🗳️ <b>Vote for the best shadowing!</b>\n\nTap the video number you think is the best. Your vote is private. You can change it until voting closes on {vote_close}.\n\n(Your own video isn't listed.)",
+  "ballot": "🗳️ <b>Vote for the best shadowing!</b>\n\nTap the video number you think is the best. Your vote is private. You can change it until voting closes on {vote_close}.\n\n(Your own video isn't listed.)\n\n⏳ I confirm your vote with a message within ~10 minutes — no need to tap twice.",
   "ballot_current": "Your current vote: <b>Video {number}</b>",
   "vote_ok": "✅ Vote recorded: <b>Video {number}</b>. You can change it until voting closes.",
   "vote_closed": "Voting isn't open right now.",

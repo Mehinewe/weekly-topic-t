@@ -245,6 +245,8 @@ def handle_ballot_tap(token, callback, cfg, sh_messages, sh_state):
     message_id = ballot.get("message_id")
     if chat_id is None or message_id is None:
         return
+    # A silent edit gives no notification, so also send the confirmation as a new message.
+    P.tg(token, "sendMessage", http="post", chat_id=chat_id, text=text, parse_mode="HTML")
     voter = (callback.get("from") or {}).get("id")
     numbering = (sh_state.get(week_iso) or {}).get("numbering") or {}
     rows = SH.ballot_buttons(week_iso, numbering, voter) if SH.voting_open(sh_state, week_iso) else []
