@@ -55,10 +55,10 @@ class ShadowingTests(unittest.TestCase):
         self.assertEqual(sorted(first), ["1", "2", "3"])
         self.assertEqual(sorted(first.values()), [10, 20, 30])
 
-    def test_tally_ignores_self_votes_and_unknown_targets(self):
+    def test_tally_counts_self_votes_and_ignores_unknown_targets(self):
         numbering = {"1": 10, "2": 20, "3": 30}
         counts = dict(S.tally({10: 10, 20: 10, 30: 10, 40: 999}, numbering))
-        self.assertEqual(counts, {10: 2, 20: 0, 30: 0})
+        self.assertEqual(counts, {10: 3, 20: 0, 30: 0})
 
     def test_rank_breaks_ties_by_earliest_submission_and_skips_zero_votes(self):
         entries = {1: {"submitted_at": "2026-10-06T09"}, 2: {"submitted_at": "2026-10-05T09"},
@@ -70,10 +70,10 @@ class ShadowingTests(unittest.TestCase):
         self.assertTrue(S.tie_affects_ranking(counts, S.rank(counts, entries, 1)))
         self.assertEqual(S.rank([(1, 0), (2, 0)], entries, 1), [])
 
-    def test_ballot_excludes_own_video(self):
+    def test_ballot_lists_every_video_including_own(self):
         rows = S.ballot_buttons(WEEK, {"1": 10, "2": 20, "3": 30}, 20)
         labels = [b["text"] for row in rows for b in row]
-        self.assertEqual(labels, ["Video 1", "Video 3"])
+        self.assertEqual(labels, ["Video 1", "Video 2", "Video 3"])
         self.assertEqual(S.parse_callback(rows[0][0]["callback_data"]), (WEEK, "1"))
         self.assertIsNone(S.parse_callback("other:1:2"))
 
@@ -154,9 +154,9 @@ class ShadowingTests(unittest.TestCase):
         self.assertEqual(S.load_votes(WEEK), {10: 20})
         ok, text, _ = self.tap(10, 3, state)                 # changing a vote replaces it
         self.assertEqual(S.load_votes(WEEK), {10: 30})
-        ok, text, _ = self.tap(10, 1, state)                 # own video
-        self.assertFalse(ok)
-        self.assertEqual(S.load_votes(WEEK), {10: 30})
+        ok, text, _ = self.tap(10, 1, state)                 # own video is allowed
+        self.assertTrue(ok)
+        self.assertEqual(S.load_votes(WEEK), {10: 10})
         ok, text, _ = self.tap(10, 9, state)                 # no such video
         self.assertFalse(ok)
         ok, text, _ = self.tap(77, 2, state)                 # group member, not in the challenge: may vote

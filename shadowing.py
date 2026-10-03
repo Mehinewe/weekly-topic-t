@@ -10,9 +10,9 @@ Flow (all times GMT/UTC):
            (anonymous) and DMs every participant a voting ballot (buttons)
   Sun   send_shadowing.py --phase results  closes voting, announces the winner(s)
 
-Only challenge members (`/join_challenge`) can submit or vote. Votes are private
-(DM buttons), one per member per week, changeable until the results phase, and
-a member cannot vote for their own video.
+Only challenge members (`/join_challenge`) can submit; any group member can vote. Votes are private
+(DM buttons), one per person per week, changeable until the results phase, and
+voting for your own video is allowed.
 
 State is numeric-id-only and committed back by the workflows:
   shadowing_participants.csv   opt-in roster
@@ -194,12 +194,11 @@ def message_kind(message):
 
 
 def tally(votes, numbering):
-    """[(user_id, vote_count)] for every numbered entry, votes for unknown ids and
-    self-votes ignored."""
+    """[(user_id, vote_count)] for every numbered entry, votes for unknown ids ignored."""
     valid = set(numbering.values())
     counts = {uid: 0 for uid in valid}
     for voter, target in votes.items():
-        if target in valid and target != voter:
+        if target in valid:
             counts[target] += 1
     return list(counts.items())
 
@@ -225,10 +224,9 @@ def tie_affects_ranking(counts, ranked):
 
 
 def ballot_buttons(week_iso, numbering, voter):
-    """Inline keyboard rows: one button per entry except the voter's own."""
+    """Inline keyboard rows: one button per entry (the voter's own included)."""
     buttons = [{"text": f"Video {n}", "callback_data": f"sv:{week_iso}:{n}"}
-               for n, uid in sorted(numbering.items(), key=lambda kv: int(kv[0]))
-               if uid != voter]
+               for n, uid in sorted(numbering.items(), key=lambda kv: int(kv[0]))]
     return [buttons[i:i + 4] for i in range(0, len(buttons), 4)]
 
 
@@ -293,8 +291,6 @@ def register_vote(state, week_iso, voter, number, participants, entries_by_user=
     target = ws["numbering"].get(str(number))
     if target is None:
         return False, "vote_bad_number", {"count": len(ws["numbering"])}
-    if target == voter:
-        return False, "vote_own", {}
     save_vote(week_iso, voter, target)
     return True, "vote_ok", {"number": number}
 
