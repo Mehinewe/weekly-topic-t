@@ -280,13 +280,15 @@ def _number_of(numbering, uid):
     return None
 
 
-def register_vote(state, week_iso, voter, number, participants, entries_by_user=None):
+def register_vote(state, week_iso, voter, number, participants, entries_by_user=None, eligible=False):
     """Validate + store a vote. Returns (ok, key, values) where `key` is a
-    message key in shadowing_messages.json."""
+    message key in shadowing_messages.json. Any group member may vote:
+    `eligible` is True when the caller already verified that (ballot buttons
+    only ever reach verified people)."""
     ws = week_state(state, week_iso)
     if not voting_open(state, week_iso):
         return False, "vote_closed", {}
-    if voter not in participants:
+    if voter not in participants and not eligible:
         return False, "vote_not_member", {}
     target = ws["numbering"].get(str(number))
     if target is None:
@@ -300,6 +302,13 @@ def register_vote(state, week_iso, voter, number, participants, entries_by_user=
 # --- commands (group or DM) ----------------------------------------------
 
 JOIN_PAYLOAD = "join"
+VOTE_PAYLOAD = "vote"
+
+
+def vote_link(token):
+    """Deep link that opens a private chat with the bot and sends the ballot on Start."""
+    link = join_link(token)
+    return link.rsplit("=", 1)[0] + "=" + VOTE_PAYLOAD if link else None
 
 
 def join_link(token):
@@ -333,6 +342,8 @@ def handle_command(message, token, main_chat_id, cfg, messages, state, today):
     is_private = (message.get("chat") or {}).get("type") == "private"
     if cmd == "start" and is_private and args[:1] == [JOIN_PAYLOAD]:
         cmd = "join_challenge"      # tapped the join link: t.me/<bot>?start=join
+    if cmd == "start" and is_private and args[:1] == [VOTE_PAYLOAD]:
+        cmd, args = "vote", []      # tapped the vote link: t.me/<bot>?start=vote
     participants = load_participants()
     week = P.monday_of(today).isoformat()
 
@@ -372,11 +383,12 @@ def handle_command(message, token, main_chat_id, cfg, messages, state, today):
         wk = voting_week(state)
         if wk is None:
             return msg(messages, "vote_closed")
-        if sender not in participants:
+        if sender not in participants and not is_group_member(token, main_chat_id, sender):
             return msg(messages, "vote_not_member")
         numbering = state[wk]["numbering"]
         if args:
-            ok, key, values = register_vote(state, wk, sender, args[0].lstrip("#"), participants)
+            ok, key, values = register_vote(state, wk, sender, args[0].lstrip("#"), participants,
+                                            eligible=True)
             return msg(messages, key, **values)
         # No number typed: (re)send the buttons.
         current = load_votes(wk).get(sender)
@@ -425,5 +437,6 @@ def handle_callback(callback, cfg, messages, state):
     voter = (callback.get("from") or {}).get("id")
     if voter is None:
         return None
-    ok, key, values = register_vote(state, week_iso, voter, number, load_participants())
+    ok, key, values = register_vote(state, week_iso, voter, number, load_participants(),
+                                        eligible=True)   # ballots only reach verified members
     return ok, msg(messages, key, **values), week_iso

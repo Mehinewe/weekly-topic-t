@@ -41,8 +41,9 @@ The entry deadline shown to members is always "showcase day 12:00 GMT" and votin
 ## Members
 
 - **Join link:** `https://t.me/Merv_english_bot?start=join` (print it any time with `python send_shadowing.py --join-link`). Tapping it opens a private chat with the bot; pressing **Start** joins the challenge *and* opens the DM channel for entries and ballots in one step. The Monday video post also carries a "🎤 Join the challenge" button with this link. Only current group members can join this way.
-- `/join_challenge` (group or DM) — the typed alternative. Only members can submit or vote. `/leave_challenge` opts out.
+- `/join_challenge` (group or DM) — the typed alternative. Only challenge members can submit; **any group member can vote**. `/leave_challenge` opts out.
 - They must open a private chat with the bot and press **Start**; the bot can't DM first. Anyone whose ballot can't be delivered is @-mentioned in the group after the showcase and can send `/vote` to the bot to get it.
+- **Open voting:** the showcase post has a "🗳️ Vote now" button (`t.me/<bot>?start=vote`). A non-participant presses it, taps **Start**, and gets the ballot (group members only; it does not enrol them). Challenge members still get ballots pushed automatically.
 - `/vote` (DM) re-sends the ballot; `/vote 3` votes directly. `/myentry` says whether their entry was received.
 - Voting is private, one vote each, no self-votes (their own video isn't a button).
 - A DM'd shadowing video counts as a **practice day** for the ≥ 3 days/week rule (activity type `shadowing`, so it does *not* count toward Video Shark).

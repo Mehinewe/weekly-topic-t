@@ -238,8 +238,10 @@ def phase_showcase(target, state, cfg, messages, token, chat_id, dry_run, force)
         ws.update(numbering=numbering, entry_count=count)
         S.save_state(state)
     if not ws.get("intro_sent"):
+        link = S.vote_link(token)
         send_text(token, chat_id, S.msg(messages, "showcase_intro", count=count,
-                                        vote_close=S.close_text(state, week)))
+                                        vote_close=S.close_text(state, week)),
+                  ("🗳️ Vote now", link) if link else None)
         ws["intro_sent"] = True
         S.save_state(state)
     sent_numbers = ws.setdefault("entries_sent", [])

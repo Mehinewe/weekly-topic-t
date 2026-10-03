@@ -159,12 +159,25 @@ class ShadowingTests(unittest.TestCase):
         self.assertEqual(S.load_votes(WEEK), {10: 30})
         ok, text, _ = self.tap(10, 9, state)                 # no such video
         self.assertFalse(ok)
-        ok, text, _ = self.tap(77, 2, state)                 # not in the challenge
-        self.assertFalse(ok)
+        ok, text, _ = self.tap(77, 2, state)                 # group member, not in the challenge: may vote
+        self.assertTrue(ok)
+        self.assertEqual(S.load_votes(WEEK)[77], 20)
+        self.assertNotIn(77, S.load_participants())          # voting does not enrol them
         state[WEEK]["results_sent"] = True                   # voting closed
         ok, text, _ = self.tap(20, 1, state)
         self.assertFalse(ok)
         self.assertNotIn(20, S.load_votes(WEEK))
+
+    def test_vote_link_sends_ballot_to_non_participant_group_member(self):
+        state = self.voting_state()
+        msg = {"text": "/start vote", "from": {"id": 55}, "chat": {"id": 55, "type": "private"}}
+        with patch.object(S, "is_group_member", return_value=True),                 patch.object(S, "send_ballot", return_value=(True, "ok")) as sb:
+            reply = S.handle_command(msg, "t", -1, self.cfg, self.messages, state, TODAY)
+        self.assertIsNone(reply)
+        sb.assert_called_once()
+        with patch.object(S, "is_group_member", return_value=False):
+            reply = S.handle_command(msg, "t", -1, self.cfg, self.messages, state, TODAY)
+        self.assertIn("members of the group", reply)
 
     def test_typed_vote_is_dm_only(self):
         self.join(10)
@@ -191,7 +204,7 @@ class PhaseTests(unittest.TestCase):
         self.cfg = {"shadowing": {"enabled": True, "ranking_size": 2}}
         self.sent = []
         self.podium = []
-        for name, fake in (("send_text", lambda t, c, text: self.sent.append(("text", text)) or 1),
+        for name, fake in (("send_text", lambda t, c, text, button=None: self.sent.append(("text", text)) or 1),
                            ("send_results", lambda t, c, cap, names, sub:
                             self.sent.append(("text", cap)) or self.podium.append(names) or 1),
                            ("name_of", lambda t, c, uid: f"Name{uid}"),
