@@ -29,6 +29,8 @@
     ],
     "ballots_failed": [],
     "showcase_sent": true,
-    "showcase_sent_at": "2026-10-03T16:46:21+00:00"
+    "showcase_sent_at": "2026-10-03T16:46:21+00:00",
+    "results_sent": true,
+    "results_sent_at": "2026-10-04T17:05:13+00:00"
   }
 }
