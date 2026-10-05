@@ -1,1 +1,11 @@
-{}
+{
+  "schedule.csv:2026-10-05": {
+    "plan": "510612162f12ab4ea7042ffa55b1ce2c6275dca562a13cfacb6aaeb09ed15b5d",
+    "steps": {
+      "photo": {
+        "status": "sent",
+        "message_id": 4698
+      }
+    }
+  }
+}
