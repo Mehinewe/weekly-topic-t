@@ -26,6 +26,7 @@ copy by file_id.
 
 import json
 import random
+import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -255,6 +256,12 @@ def record_practice_activity(sent_dt):
 
 
 # --- Telegram helpers ----------------------------------------------------------
+
+def bare_vote_number(text):
+    """'2', '#2' or 'video 2' -> '2'; None for anything else."""
+    m = re.fullmatch(r"\s*(?:video\s*)?#?(\d{1,2})\s*", text or "", re.IGNORECASE)
+    return m.group(1) if m else None
+
 
 def reply_markup(rows):
     return json.dumps({"inline_keyboard": rows})

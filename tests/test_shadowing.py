@@ -330,6 +330,12 @@ class PhaseTests(unittest.TestCase):
                          [("showcase", date(2026, 9, 28))])
         self.assertIn("Friday 11:59 PM GMT", S.deadline_text(state))
 
+    def test_bare_number_is_a_vote(self):
+        for text, want in [("2", "2"), (" 12 ", "12"), ("#3", "3"), ("Video 1", "1"), ("video1", "1")]:
+            self.assertEqual(S.bare_vote_number(text), want)
+        for text in ["", "hello", "2 pm", "1 2", "100", "/vote 2", None]:
+            self.assertIsNone(S.bare_vote_number(text))
+
     def test_voting_closes_at_8pm_gmt_before_results(self):
         past = {"showcase_sent": True, "numbering": {"1": 1}, "vote_closes_at": "2020-01-01T20:00:00+00:00"}
         future = dict(past, vote_closes_at="2999-01-01T20:00:00+00:00")

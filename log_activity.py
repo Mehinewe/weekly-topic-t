@@ -208,6 +208,10 @@ def handle_private(token, target_chat, message, cfg, sh_messages, sh_state, memb
         return
     chat_id = (message.get("chat") or {}).get("id")
     text = message.get("text") or ""
+    number = SH.bare_vote_number(text)
+    if number:      # "2" (or "video 2") sent to the bot is a vote: same as "/vote 2"
+        message = dict(message, text=f"/vote {number}")
+        text = message["text"]
     if text.lstrip().startswith("/"):
         cmd = text.split()[0].split("@", 1)[0].lower().lstrip("/")
         if cmd in SH.COMMANDS:
