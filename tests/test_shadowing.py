@@ -322,13 +322,19 @@ class PhaseTests(unittest.TestCase):
                 patch.object(send, "load_schedule", return_value=rows):
             send.phase_video(date(2026, 9, 28), state, {}, self.messages, "t", "-1", False, False)
         ws = state["2026-09-28"]
-        self.assertEqual((ws["showcase_on"], ws["results_on"]), ("2026-10-03", "2026-10-04"))
-        self.assertEqual((ws["deadline"], ws["vote_close"]), ("Saturday 12:00 GMT", "Sunday 15:47 GMT"))
+        self.assertEqual((ws["showcase_on"], ws["results_on"]), ("2026-10-03", "2026-10-05"))
+        self.assertEqual((ws["deadline"], ws["vote_close"]), ("Friday 11:59 PM GMT", "Sunday 8:00 PM GMT"))
         # the Thursday 15:47 GMT run must NOT showcase; Saturday's does
         self.assertEqual([a for a, _ in send.due_actions(state, rows, {}, self.gmt(1, 16))], ["video"])
         self.assertEqual(send.due_actions(state, rows, {}, self.gmt(3, 16)),
                          [("showcase", date(2026, 9, 28))])
-        self.assertIn("Saturday 12:00 GMT", S.deadline_text(state))
+        self.assertIn("Friday 11:59 PM GMT", S.deadline_text(state))
+
+    def test_voting_closes_at_8pm_gmt_before_results(self):
+        past = {"showcase_sent": True, "numbering": {"1": 1}, "vote_closes_at": "2020-01-01T20:00:00+00:00"}
+        future = dict(past, vote_closes_at="2999-01-01T20:00:00+00:00")
+        self.assertFalse(S.voting_open({"w": past}, "w"))
+        self.assertTrue(S.voting_open({"w": future}, "w"))
 
     def test_schedule_rejects_out_of_order_dates(self):
         root = Path(self.tmp.name)

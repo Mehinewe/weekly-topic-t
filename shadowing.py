@@ -81,8 +81,9 @@ def save_state(state):
 
 
 WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-DEADLINE_CLOCK = "12:00 GMT"      # entries are due this many hours before the showcase
-CLOSE_CLOCK = "15:47 GMT"
+DEADLINE_CLOCK = "11:59 PM GMT"   # entries are due the evening before the showcase
+CLOSE_CLOCK = "8:00 PM GMT"
+CLOSE_HOUR = 20                  # voting closes at this GMT hour on results_date; results post the next morning
 GENERIC_DEADLINE = "the deadline in each week's video post"
 
 
@@ -93,8 +94,8 @@ def week_keys(state):
 
 
 def default_dates(monday):
-    """(video, showcase, results) dates of a normal week: Monday, Thursday, Sunday."""
-    return monday, monday + timedelta(days=3), monday + timedelta(days=6)
+    """(video, showcase, voting-close) dates of a normal week: Monday, Saturday, Sunday."""
+    return monday, monday + timedelta(days=5), monday + timedelta(days=6)
 
 
 def deadline_text(state):
@@ -120,7 +121,10 @@ def submissions_open(state, week_iso):
 
 def voting_open(state, week_iso):
     ws = week_state(state, week_iso)
-    return bool(ws.get("showcase_sent")) and not ws.get("results_sent") and bool(ws.get("numbering"))
+    if not (ws.get("showcase_sent") and not ws.get("results_sent") and ws.get("numbering")):
+        return False
+    closes = ws.get("vote_closes_at")
+    return not (closes and datetime.now(timezone.utc) >= datetime.fromisoformat(closes))
 
 
 def voting_week(state):

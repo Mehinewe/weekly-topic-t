@@ -3,7 +3,7 @@
     python send_shadowing.py --phase due                     (what the workflow runs)
     python send_shadowing.py --phase video|showcase|results|announce [--date YYYY-MM-DD] [--dry-run]
 
-A normal week is video Monday, showcase Thursday, results Sunday;
+A normal week is video Monday, showcase Saturday ~01:00 GMT, voting closes Sunday 8 PM GMT, results Monday;
 schedule_shadowing.csv can override each of those dates for a given week.
 `--phase due` runs whatever is due today (GMT) and is safe to repeat. `--date`
 is any day of the target week for the manual phases. Every step is recorded in
@@ -43,8 +43,8 @@ SEND_PAUSE = 3                          # seconds between group posts (group rat
 
 # Earliest GMT time each phase may run on its day (the workflow adds later catch-ups).
 VIDEO_TIME = time(10, 47)
-SHOWCASE_TIME = time(15, 47)
-RESULTS_TIME = time(15, 47)
+SHOWCASE_TIME = time(1, 0)
+RESULTS_TIME = time(10, 47)
 ANNOUNCE_TIME = time(10, 47)
 
 
@@ -188,10 +188,14 @@ def phase_video(target, state, cfg, messages, token, chat_id, dry_run, force):
                                  S.join_link(token))
     if type(message_id) is not int or message_id <= 0:
         raise ValueError("Telegram returned no message id; inspect the chat before retrying.")
+    # results_date in the CSV is the day voting closes (8 PM GMT); the results post the next morning.
+    close_day = row["results_on"]
     ws.update(video_message_id=message_id, video_sent_at=P.iso_now(),
-              showcase_on=row["showcase_on"].isoformat(), results_on=row["results_on"].isoformat(),
-              deadline=f"{S.WEEKDAYS[row['showcase_on'].weekday()]} {S.DEADLINE_CLOCK}",
-              vote_close=f"{S.WEEKDAYS[row['results_on'].weekday()]} {S.CLOSE_CLOCK}")
+              showcase_on=row["showcase_on"].isoformat(),
+              results_on=(close_day + timedelta(days=1)).isoformat(),
+              vote_closes_at=datetime.combine(close_day, time(S.CLOSE_HOUR), tzinfo=timezone.utc).isoformat(),
+              deadline=f"{S.WEEKDAYS[max(row['video_on'], row['showcase_on'] - timedelta(days=1)).weekday()]} {S.DEADLINE_CLOCK}",
+              vote_close=f"{S.WEEKDAYS[close_day.weekday()]} {S.CLOSE_CLOCK}")
     S.save_state(state)
     try:
         P.record_topic_post(message_id, chat_id, "shadowing_video")

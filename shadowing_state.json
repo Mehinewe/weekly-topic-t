@@ -36,9 +36,10 @@
   "2026-10-05": {
     "video_message_id": 4700,
     "video_sent_at": "2026-10-05T20:46:53+00:00",
-    "showcase_on": "2026-10-08",
-    "results_on": "2026-10-11",
-    "deadline": "Thursday 12:00 GMT",
-    "vote_close": "Sunday 15:47 GMT"
+    "showcase_on": "2026-10-10",
+    "results_on": "2026-10-12",
+    "deadline": "Friday 11:59 PM GMT",
+    "vote_close": "Sunday 8:00 PM GMT",
+    "vote_closes_at": "2026-10-11T20:00:00+00:00"
   }
 }

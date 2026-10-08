@@ -6,6 +6,8 @@ on:
     # what (if anything) is due today from schedule_shadowing.csv / shadowing_state.json
     # (video, Thursday-style showcase, results, join announcement). The later slots
     # are catch-ups for GitHub's best-effort cron; every phase is idempotent.
+    - cron: "7 1 * * *"
+    - cron: "7 3 * * *"
     - cron: "47 10 * * *"
     - cron: "47 12 * * *"
     - cron: "47 14 * * *"

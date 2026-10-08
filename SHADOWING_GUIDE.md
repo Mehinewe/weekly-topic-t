@@ -8,14 +8,15 @@ All times are **GMT**.
 | When (GMT) | What happens | Script / workflow |
 |---|---|---|
 | Monday 10:47 | Bot posts the weekly shadowing video in the group | `send_shadowing.py --phase video` |
-| Mon – Thu | Members DM their shadowing video to the bot (a newer one replaces the older) | poller, `log_activity.py` |
-| Thursday 12:00 | Announced deadline for entries | (guidance only) |
-| Thursday 15:47 | Entries are posted as **Video 1, 2, 3…** (anonymous, shuffled) and each member gets a private ballot | `--phase showcase` |
-| Thu – Sun | Members tap a button in their ballot to vote; they can change it until close | poller |
-| Sunday 15:47 | Voting closes; top places announced, winner's video re-shown, winner badge posted | `--phase results` |
+| Mon – Fri | Members DM their shadowing video to the bot (a newer one replaces the older) | poller, `log_activity.py` |
+| Friday 23:59 | Announced deadline for entries (11:59 PM GMT, the evening before the showcase) | (guidance only) |
+| Saturday ~01:00 | Entries are posted as **Video 1, 2, 3…** (anonymous, shuffled) and each member gets a private ballot | `--phase showcase` |
+| Sat – Sun | Members tap a button in their ballot to vote; they can change it until close | poller |
+| Sunday 20:00 | Voting closes (votes after this are rejected) | poller |
+| Monday ~10:47 | Results: top places announced, winner's video re-shown, winner badge posted (just after the weekly awards) | `--phase results` |
 
 Each phase has two later catch-up cron slots (+2 h, +4 h) and is idempotent, so a late or dropped GitHub run is safe.
-The real cut-off for entries is the moment the Thursday showcase starts, not 12:00.
+The real cut-off for entries is the moment the Saturday showcase starts, not 11:59 PM.
 
 ## Different dates for one week (e.g. the launch week)
 
@@ -26,7 +27,7 @@ date,video,message,video_date,showcase_date,results_date
 2026-09-28,week1.mp4,"caption…",2026-10-01,2026-10-03,2026-10-04
 ```
 
-The entry deadline shown to members is always "showcase day 12:00 GMT" and voting closes "results day 15:47 GMT". The workflow runs every day at 10:47 / 12:47 / 14:47 / 15:47 / 17:47 / 19:47 GMT and does `--phase due`: it posts whatever is scheduled for *today* (later slots are catch-ups; everything is idempotent).
+The entry deadline shown to members is always "11:59 PM GMT the day before the showcase" and voting closes "results_date 8:00 PM GMT" (the results post the next morning, ~10:47 GMT). The workflow runs every day at 01:07 / 03:07 / 10:47 / 12:47 / 14:47 / 15:47 / 17:47 / 19:47 GMT and does `--phase due`: it posts whatever is scheduled for *today* (later slots are catch-ups; everything is idempotent).
 
 ## Join announcement
 
