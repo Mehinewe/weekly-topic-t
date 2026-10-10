@@ -40,6 +40,33 @@
     "results_on": "2026-10-12",
     "deadline": "Friday 11:59 PM GMT",
     "vote_close": "Sunday 8:00 PM GMT",
-    "vote_closes_at": "2026-10-11T20:00:00+00:00"
+    "vote_closes_at": "2026-10-11T20:00:00+00:00",
+    "numbering": {
+      "1": 7334599398,
+      "2": 7845818180,
+      "3": 7847453913,
+      "4": 916464267
+    },
+    "entry_count": 4,
+    "intro_sent": true,
+    "entries_sent": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "ballots_sent": [
+      916464267,
+      1425933192,
+      7334599398,
+      7508017555,
+      7545589531,
+      7845818180,
+      7847453913,
+      7900897634
+    ],
+    "ballots_failed": [],
+    "showcase_sent": true,
+    "showcase_sent_at": "2026-10-10T07:00:04+00:00"
   }
 }
