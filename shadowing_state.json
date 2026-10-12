@@ -67,6 +67,23 @@
     ],
     "ballots_failed": [],
     "showcase_sent": true,
-    "showcase_sent_at": "2026-10-10T07:00:04+00:00"
+    "showcase_sent_at": "2026-10-10T07:00:04+00:00",
+    "results_text_sent": true,
+    "winner_video_sent": true,
+    "winner_badge_sent": true,
+    "results_sent": true,
+    "results_sent_at": "2026-10-12T20:00:36+00:00",
+    "winners": [
+      916464267
+    ]
+  },
+  "2026-10-12": {
+    "video_message_id": 4985,
+    "video_sent_at": "2026-10-12T20:00:09+00:00",
+    "showcase_on": "2026-10-17",
+    "results_on": "2026-10-19",
+    "vote_closes_at": "2026-10-18T20:00:00+00:00",
+    "deadline": "Friday 11:59 PM GMT",
+    "vote_close": "Sunday 8:00 PM GMT"
   }
 }
