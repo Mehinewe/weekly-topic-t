@@ -84,6 +84,9 @@
     "results_on": "2026-10-19",
     "vote_closes_at": "2026-10-18T20:00:00+00:00",
     "deadline": "Friday 11:59 PM GMT",
-    "vote_close": "Sunday 8:00 PM GMT"
+    "vote_close": "Sunday 8:00 PM GMT",
+    "showcase_sent": true,
+    "showcase_sent_at": "2026-10-17T05:32:47+00:00",
+    "entry_count": 1
   }
 }
