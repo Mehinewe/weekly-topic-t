@@ -88,5 +88,14 @@
     "showcase_sent": true,
     "showcase_sent_at": "2026-10-17T05:32:47+00:00",
     "entry_count": 1
+  },
+  "2026-10-19": {
+    "video_message_id": 5197,
+    "video_sent_at": "2026-10-19T17:10:23+00:00",
+    "showcase_on": "2026-10-24",
+    "results_on": "2026-10-26",
+    "vote_closes_at": "2026-10-25T20:00:00+00:00",
+    "deadline": "Friday 11:59 PM GMT",
+    "vote_close": "Sunday 8:00 PM GMT"
   }
 }
