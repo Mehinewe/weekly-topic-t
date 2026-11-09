@@ -34,5 +34,14 @@
         "message_id": 5381
       }
     }
+  },
+  "schedule.csv:2026-11-09": {
+    "plan": "23af9424ca7af1a3d808c563442349e1cd08393b580065df34909768c1e49875",
+    "steps": {
+      "photo": {
+        "status": "sent",
+        "message_id": 5716
+      }
+    }
   }
 }
