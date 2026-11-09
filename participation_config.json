@@ -2,7 +2,7 @@
   "required_days": 3,
   "clear_weeks": 1,
   "week_timezone": "UTC",
-  "auto_removal": false,
+  "auto_removal": true,
 
   "classifier": {
     "count_voice": true,
