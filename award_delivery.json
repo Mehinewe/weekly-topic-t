@@ -115,11 +115,16 @@
       }
     }
   },
-  "2026-10-26": {
-    "plan": "ff407c69c736949cb078e9baba963471590e892b541e485faa29dfb62f99fb21",
+  "2026-11-02": {
+    "plan": "07d099ca2331ec10b6e661da29889b254f74469986420b1801c75e795a10cca8",
     "steps": {
       "video_shark:badge": {
-        "status": "pending"
+        "status": "sent",
+        "message_id": 1
+      },
+      "video_shark:complete": {
+        "status": "sent",
+        "message_id": 1
       }
     }
   }
