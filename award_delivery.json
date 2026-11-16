@@ -154,6 +154,22 @@
       "video_shark:complete": {
         "status": "sent",
         "message_id": 1
+      },
+      "voice_legend:badge": {
+        "status": "sent",
+        "message_id": 5841
+      },
+      "voice_legend:complete": {
+        "status": "sent",
+        "message_id": 5841
+      },
+      "social_butterfly:badge": {
+        "status": "sent",
+        "message_id": 5842
+      },
+      "social_butterfly:complete": {
+        "status": "sent",
+        "message_id": 5842
       }
     }
   }
