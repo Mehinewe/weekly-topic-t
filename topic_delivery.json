@@ -43,5 +43,14 @@
         "message_id": 5716
       }
     }
+  },
+  "schedule.csv:2026-11-16": {
+    "plan": "3a1573139a4444385fbfef4a417fa49d5d38565e02d2dd25a79f05f364e63d26",
+    "steps": {
+      "photo": {
+        "status": "sent",
+        "message_id": 5834
+      }
+    }
   }
 }
